@@ -1,0 +1,67 @@
+model:
+    arch: nas-unet
+data:
+    source_train: 'data/MICCAI_BraTS_2019_Data_Training'
+    source_val: 'data/MICCAI_BraTS_2019_Data_Validation'
+    source_test: 'data/MICCAI_BraTS_2019_Data_Testing'
+    h5_train: 'data/train.h5'
+    h5_val: 'data/val.h5'
+    h5_test: 'data/test.h5'
+    dataset: chaos
+    train_split: train_aug
+    split: val
+    img_rows: 'same'
+    img_cols: 'same'
+searching:
+    init_channels: 16
+    depth: 4
+    epoch: 300
+    batch_size: 2
+    report_freq: 20
+    n_workers: 2
+    alpha_begin: 0
+    max_patience: 40
+    gpu: True
+    multi_gpus: True
+    sharing_normal: True
+    double_down_channel: False
+    meta_node_num: 3
+    grad_clip: 5
+    train_portion: 0.5
+    model_optimizer:
+        name: 'adabound'
+        lr: 1.0e-3
+        weight_decay: 5.0e-4
+    arch_optimizer:
+        name: 'adam'
+        lr: 3.0e-4
+        weight_decay: 5.0e-3
+    loss:
+        name: 'cross_entropy'
+        size_average: False
+        aux_weight:
+    resume:
+training:
+    geno_type: NASUNET
+    init_channels: 64
+    depth: 6
+    epoch: 800
+    batch_size: 1
+    report_freq: 5
+    n_workers: 4
+    multi_gpus: False
+    double_down_channel: False
+    grad_clip: 5
+    max_patience: 100
+    model_optimizer:
+        name: 'adabound'
+        lr: 1.0e-3
+        weight_decay: 5.0e-4
+    loss:
+        name: 'cross_entropy_with_dice'
+        aux_weight: 0.7
+    backbone:
+    lr_schedule:
+        name: 'exp_lr'
+        gamma: 0.995
+    resume:
