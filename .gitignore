@@ -1,4 +1,5 @@
 
+*.pkl
 *.h5
 **/data/
 **/test_trashcan/
