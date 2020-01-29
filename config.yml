@@ -6,6 +6,9 @@ data:
     source_val: 'data/MICCAI_BraTS_2019_Data_Validation'
     source_test: 'data/MICCAI_BraTS_2019_Data_Testing'
     mean_std_file: 'data/mean_std.pkl'
+    cross_val_indices: 'data/cross_val_indices.pkl'
+    
+    
     dataset: chaos
     train_split: train_aug
     split: val

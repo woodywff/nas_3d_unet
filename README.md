@@ -10,10 +10,6 @@ anyway, it will give out an iterable object as output.
 
 h5py
 self generator
-self generator + pytorch.utils.data.Datasets
-self generator + pytorch.utils.data.IterableDatasets
 
-self transform
-torchvision.transform
 
 
