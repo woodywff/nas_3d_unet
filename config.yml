@@ -1,69 +1,82 @@
-model:
-    arch: nas-unet
 data:
-    all_mods: ["t1", "t1ce", "flair", "t2"]
-    source_train: 'data/MICCAI_BraTS_2019_Data_Training'
-    source_val: 'data/MICCAI_BraTS_2019_Data_Validation'
-    source_test: 'data/MICCAI_BraTS_2019_Data_Testing'
-    mean_std_file: 'data/mean_std.pkl'
-    cross_val_indices: 'data/cross_val_indices.pkl'
-    
-    
-    dataset: chaos
-    train_split: train_aug
-    split: val
-    img_rows: 'same'
-    img_cols: 'same'
+  affine_file: data/affine.npy
+  all_mods:
+  - t1
+  - t1ce
+  - flair
+  - t2
+  cross_val_indices: data/cross_val_indices.pkl
+  len_testing: 166
+  len_training: 335
+  len_validation: 125
+  mean_std_file: data/mean_std.pkl
+  source_test: data/MICCAI_BraTS_2019_Data_Testing
+  source_train: data/MICCAI_BraTS_2019_Data_Training
+  source_val: data/MICCAI_BraTS_2019_Data_Validation
+  testing_h5: data/testing.h5
+  training_h5: data/training.h5
+  validation_h5: data/validation.h5
+generator:
+  aug_distort: 0.25
+  labels:
+  - 1
+  - 2
+  - 4
+  patch_shape: (64,64,64)
+  batch_size_train: 1
+  batch_size_val: 2
+model:
+  arch: nas-unet
 searching:
-    init_channels: 16
-    depth: 4
-    epoch: 300
-    batch_size: 2
-    report_freq: 20
-    n_workers: 2
-    alpha_begin: 0
-    max_patience: 40
-    gpu: True
-    multi_gpus: True
-    sharing_normal: True
-    double_down_channel: False
-    meta_node_num: 3
-    grad_clip: 5
-    train_portion: 0.5
-    model_optimizer:
-        name: 'adabound'
-        lr: 1.0e-3
-        weight_decay: 5.0e-4
-    arch_optimizer:
-        name: 'adam'
-        lr: 3.0e-4
-        weight_decay: 5.0e-3
-    loss:
-        name: 'cross_entropy'
-        size_average: False
-        aux_weight:
-    resume:
+  alpha_begin: 0
+  arch_optimizer:
+    lr: 0.0003
+    name: adam
+    weight_decay: 0.005
+  batch_size: 2
+  depth: 4
+  double_down_channel: false
+  epoch: 300
+  gpu: true
+  grad_clip: 5
+  init_channels: 16
+  loss:
+    aux_weight: null
+    name: cross_entropy
+    size_average: false
+  max_patience: 40
+  meta_node_num: 3
+  model_optimizer:
+    lr: 0.001
+    name: adabound
+    weight_decay: 0.0005
+  multi_gpus: true
+  n_workers: 2
+  report_freq: 20
+  resume: null
+  sharing_normal: true
+  train_portion: 0.5
 training:
-    geno_type: NASUNET
-    init_channels: 64
-    depth: 6
-    epoch: 800
-    batch_size: 1
-    report_freq: 5
-    n_workers: 4
-    multi_gpus: False
-    double_down_channel: False
-    grad_clip: 5
-    max_patience: 100
-    model_optimizer:
-        name: 'adabound'
-        lr: 1.0e-3
-        weight_decay: 5.0e-4
-    loss:
-        name: 'cross_entropy_with_dice'
-        aux_weight: 0.7
-    backbone:
-    lr_schedule:
-        name: 'exp_lr'
-        gamma: 0.995
-    resume:
+  backbone: null
+  batch_size: 1
+  depth: 6
+  double_down_channel: false
+  epoch: 800
+  geno_type: NASUNET
+  grad_clip: 5
+  init_channels: 64
+  loss:
+    aux_weight: 0.7
+    name: cross_entropy_with_dice
+  lr_schedule:
+    gamma: 0.995
+    name: exp_lr
+  max_patience: 100
+  model_optimizer:
+    lr: 0.001
+    name: adabound
+    weight_decay: 0.0005
+  multi_gpus: false
+  n_workers: 4
+  report_freq: 5
+  resume: null
