@@ -47,32 +47,33 @@ def distort_image(image, flip_axis=None, scale_factor=None):
     return image
 
 
-def augment_data(data, truth, affine, scale_deviation=None, flip=True):
-    n_dim = len(truth.shape)
-    if scale_deviation:
-        scale_factor = random_scale_factor(n_dim, std=scale_deviation)
-    else:
-        scale_factor = None
-    if flip:
-        flip_axis = random_flip_dimensions(n_dim)
-    else:
-        flip_axis = None
-    data_list = list()
+def do_augment(data, truth, affine, scale_deviation=None, flip=True):
+    '''
+    data.shape = (4,_,_,_)
+    truth.shape = (1,_,_,_)
+    '''
+    n_dim = len(truth.shape) - 1
+    scale_factor = random_scale_factor(n_dim, std=scale_deviation) if scale_deviation is not None else None
+    flip_axis = random_flip_dimensions(n_dim) if flip else None
+    data = augment_data(data, affine, scale_factor, flip_axis)
+    truth = augment_data(truth, affine, scale_factor, flip_axis)
+    return data, truth
+
+def augment_data(data, affine, scale_factor, flip_axis):
+    data_list = []
     for data_index in range(data.shape[0]):
         image = get_image(data[data_index], affine)
         data_list.append(resample_to_img(distort_image(image, flip_axis=flip_axis,
                                                        scale_factor=scale_factor), image,
                                          interpolation="nearest").get_data())
 #                                          interpolation="continuous").get_data())
-    data = np.asarray(data_list)
-    truth_image = get_image(truth, affine)
-    truth_data = resample_to_img(distort_image(truth_image, flip_axis=flip_axis, scale_factor=scale_factor),
-                                 truth_image, interpolation="nearest").get_data()
-    return data, truth_data
+    return np.asarray(data_list)
 
 def get_image(data, affine, nib_class=nib.Nifti1Image):
     return nib_class(dataobj=data, affine=affine)
 
+
+# -------------------------------------- permutation: -----------------------------------
 
 def generate_permutation_keys():
     """
@@ -141,27 +142,27 @@ def random_permutation_x_y(x_data, y_data):
     key = random_permutation_key()
     return permute_data(x_data, key), permute_data(y_data, key)
 
-def reverse_permute_data(data, key):
-    key = reverse_permutation_key(key)
-    data = np.copy(data)
-    (rotate_y, rotate_z), flip_x, flip_y, flip_z, transpose = key
+# def reverse_permute_data(data, key):
+#     key = reverse_permutation_key(key)
+#     data = np.copy(data)
+#     (rotate_y, rotate_z), flip_x, flip_y, flip_z, transpose = key
 
-    if transpose:
-        for i in range(data.shape[0]):
-            data[i] = data[i].T
-    if flip_z:
-        data = data[:, :, :, ::-1]
-    if flip_y:
-        data = data[:, :, ::-1]
-    if flip_x:
-        data = data[:, ::-1]
-    if rotate_z != 0:
-        data = np.rot90(data, rotate_z, axes=(2, 3))
-    if rotate_y != 0:
-        data = np.rot90(data, rotate_y, axes=(1, 3))
-    return data
+#     if transpose:
+#         for i in range(data.shape[0]):
+#             data[i] = data[i].T
+#     if flip_z:
+#         data = data[:, :, :, ::-1]
+#     if flip_y:
+#         data = data[:, :, ::-1]
+#     if flip_x:
+#         data = data[:, ::-1]
+#     if rotate_z != 0:
+#         data = np.rot90(data, rotate_z, axes=(2, 3))
+#     if rotate_y != 0:
+#         data = np.rot90(data, rotate_y, axes=(1, 3))
+#     return data
 
 
-def reverse_permutation_key(key):
-    rotation = tuple([-rotate for rotate in key[0]])
-    return rotation, key[1], key[2], key[3], key[4]
+# def reverse_permutation_key(key):
+#     rotation = tuple([-rotate for rotate in key[0]])
+#     return rotation, key[1], key[2], key[3], key[4]

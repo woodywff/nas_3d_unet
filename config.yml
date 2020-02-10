@@ -16,13 +16,12 @@ data:
   testing_h5: data/testing.h5
   training_h5: data/training.h5
   validation_h5: data/validation.h5
-generator:
   aug_distort: 0.25
   labels:
   - 1
   - 2
   - 4
-  patch_shape: (64,64,64)
+  patch_shape: (128,128,128)
   batch_size_train: 1
   batch_size_val: 2
 model:
