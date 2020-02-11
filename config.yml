@@ -21,9 +21,14 @@ data:
   - 1
   - 2
   - 4
-  patch_shape: (128,128,128)
+  patch_shape: 128
+  patch_overlap: null
   batch_size_train: 1
   batch_size_val: 2
+  augment: true
+  augment_flip: true
+  augment_distortion_factor: 0.25
+  permute: true
 model:
   arch: nas-unet
 searching:

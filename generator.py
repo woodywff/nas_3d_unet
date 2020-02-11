@@ -1,279 +1,165 @@
-import os
-import copy
 from random import shuffle
-import itertools
-
+import yaml
 import numpy as np
+import h5py
+from patches import create_id_index_patch_list, get_patch_from_3d_data
+from augment import do_augment, random_permutation_x_y
+import pickle
 
-from .utils import pickle_dump, pickle_load
-from .patches import compute_patch_indices, get_random_nd_index, get_patch_from_3d_data, compute_patch_indices_for_prediction
-from .augment import augment_data, random_permutation_x_y
+def data_generator(indices_list, data_file, 
+                   patch_shape, patch_overlap = None, 
+                   batch_size=1, labels=None, 
+                   augment=False, augment_flip=True, augment_distortion_factor=0.25, permute=False,
+                   shuffle_index_list=True, 
+                   affine_file = None):
+    '''
+    Generator for training and validation datasets. 
+    In this project training and val dataset both come from training.h5
+    Patching = True
+    Augmentation = True
+    Overlap_label = True
+    Pred_specific = True
+    '''
+#     pdb.set_trace()
+    if isinstance(patch_shape,int):
+        patch_shape = [patch_shape] * 3
+    while True:
+        x_list = []
+        y_list = []
+        id_index_patch_list = create_id_index_patch_list(indices_list, data_file, patch_shape, patch_overlap)
+        if shuffle_index_list:
+            shuffle(id_index_patch_list)
+        while len(id_index_patch_list) > 0:
+            id_index_patch = id_index_patch_list.pop()
+            add_data(x_list, y_list, data_file, id_index_patch, patch_shape,
+                     augment=augment, augment_flip=augment_flip,
+                     augment_distortion_factor=augment_distortion_factor, 
+                     permute=permute, affine_file = affine_file)
+            if len(x_list) == batch_size or (len(id_index_patch_list) == 0 and len(x_list) > 0):
+                yield convert_data(x_list, y_list,labels=labels)
+#                 convert_data(x_list, y_list,labels=labels)
+                x_list = []
+                y_list = []
+    return
 
-import pdb
-from dev_tools.my_tools import print_red
-from tqdm import tqdm
-import time
+def add_data(x_list, y_list, data_file, id_index_patch, patch_shape,
+             augment=False, augment_flip=False, augment_distortion_factor=0.25,
+             permute=False, skip_health = True, affine_file = None):
+    '''
+    Add qualified x,y to the generator list
+    '''
+#     pdb.set_trace()
+    # data.shape = (4,_,_,_), truth.shape = (1,_,_,_):
+    data, truth = get_data_from_file(data_file, id_index_patch, patch_shape)
+    # skip empty images
+    if np.all(data == 0):
+        return
+    # skip none tumor images
+    if skip_health and np.all(truth==0):
+        return
+    if augment:
+        affine = np.load(affine_file)
+        data, truth = do_augment(data, truth, affine, flip=augment_flip, 
+                                 scale_deviation=augment_distortion_factor)
+    if permute:
+        assert data.shape[-1] == data.shape[-2] == data.shape[-3], 'Not a cubic patch!'
+        data, truth = random_permutation_x_y(data, truth)
+    x_list.append(data)
+    y_list.append(truth)
+    return
 
-class generator():
-    def __init__(self):
-        with
+
+def get_data_from_file(data_file, id_index_patch, patch_shape):
+    '''
+    Load image patch from .h5 file and mix 4 modalities into one 4d ndarray. 
+    Return x.shape = (4,_,_,_); y.shape = (1,_,_,_)
+    '''
+#     pdb.set_trace()
+    id_index, patch = id_index_patch
+    
+    with h5py.File(data_file,'r') as h5_file:
+        sub_id = list(h5_file.keys())[id_index]
+        brain_width = h5_file[sub_id]['brain_width']
         
-        
-    def get_training_and_validation_generators(data_file, batch_size, n_labels, training_keys_file, validation_keys_file,
-                                               data_split=0.8, overwrite=False, labels=None, augment=False,
-                                               augment_flip=True, augment_distortion_factor=0.25, patch_shape=None,
-                                               validation_patch_overlap=0, training_patch_start_offset=None,
-                                               validation_batch_size=None, skip_blank=True, permute=False,num_model=1,
-                                               pred_specific=False, overlap_label=True,
-                                               for_final_val=False):
-    #     pdb.set_trace()
-        if not validation_batch_size:
-            validation_batch_size = batch_size
-
-        training_list, validation_list = get_validation_split(data_file,
-                                                              data_split=data_split,
-                                                              overwrite=overwrite,
-                                                              training_file=training_keys_file,
-                                                              validation_file=validation_keys_file)
-        if for_final_val:
-            training_list = training_list + validation_list
-
-        training_generator = data_generator(data_file, training_list,
-                                            batch_size=batch_size,
-                                            n_labels=n_labels,
-                                            labels=labels,
-                                            augment=augment,
-                                            augment_flip=augment_flip,
-                                            augment_distortion_factor=augment_distortion_factor,
-                                            patch_shape=patch_shape,
-                                            patch_overlap=validation_patch_overlap,
-                                            patch_start_offset=training_patch_start_offset,
-                                            skip_blank=skip_blank,
-                                            permute=permute,
-                                            num_model=num_model,
-                                            pred_specific=pred_specific,
-                                            overlap_label=overlap_label)
-
-        validation_generator = data_generator(data_file, validation_list,
-                                              batch_size=validation_batch_size,
-                                              n_labels=n_labels,
-                                              labels=labels,
-                                              patch_shape=patch_shape,
-                                              patch_overlap=validation_patch_overlap,
-                                              skip_blank=skip_blank,
-                                              num_model=num_model,
-                                              pred_specific=pred_specific,
-                                              overlap_label=overlap_label)
-
-        # Set the number of training and testing samples per epoch correctly
-    #     pdb.set_trace()
-        if os.path.exists('num_patches_training.npy'):
-            num_patches_training = int(np.load('num_patches_training.npy'))
-        else:
-            num_patches_training = get_number_of_patches(data_file, training_list, patch_shape,
-                                                           skip_blank=skip_blank,
-                                                           patch_start_offset=training_patch_start_offset,
-                                                           patch_overlap=validation_patch_overlap,
-                                                           pred_specific=pred_specific)
-            np.save('num_patches_training', num_patches_training)
-        num_training_steps = get_number_of_steps(num_patches_training, batch_size)
-        print("Number of training steps in each epoch: ", num_training_steps)
-
-        if os.path.exists('num_patches_val.npy'):
-            num_patches_val = int(np.load('num_patches_val.npy'))
-        else:
-            num_patches_val = get_number_of_patches(data_file, validation_list, patch_shape,
-                                                     skip_blank=skip_blank,
-                                                     patch_overlap=validation_patch_overlap,
-                                                     pred_specific=pred_specific)
-            np.save('num_patches_val', num_patches_val)
-        num_validation_steps = get_number_of_steps(num_patches_val, validation_batch_size)
-        print("Number of validation steps in each epoch: ", num_validation_steps)
-
-        return training_generator, validation_generator, num_training_steps, num_validation_steps
-
-
-
-    def get_number_of_steps(n_samples, batch_size):
-        if n_samples <= batch_size:
-            return n_samples
-        elif np.remainder(n_samples, batch_size) == 0:
-            return n_samples//batch_size
-        else:
-            return n_samples//batch_size + 1
-
-
-    def get_validation_split(data_file, training_file, validation_file, data_split=0.8, overwrite=False):
-        '''
-        Splits the data into the training and validation indices list.
-        '''
-        if overwrite or not os.path.exists(training_file):
-            print("Creating validation split...")
-            nb_samples = data_file.root.truth.shape[0]
-            sample_list = list(range(nb_samples))
-            training_list, validation_list = split_list(sample_list, split=data_split)
-            pickle_dump(training_list, training_file)
-            pickle_dump(validation_list, validation_file)
-            return training_list, validation_list
-        else:
-            print("Loading previous validation split...")
-            return pickle_load(training_file), pickle_load(validation_file)
-
-
-    def split_list(input_list, split=0.8, shuffle_list=True):
-        if shuffle_list:
-            shuffle(input_list)
-        n_training = int(len(input_list) * split)
-        training = input_list[:n_training]
-        testing = input_list[n_training:]
-        return training, testing
-
-
-
-
-    def data_generator(data_file, index_list, batch_size=1, n_labels=1, labels=None, augment=False, augment_flip=True,
-                       augment_distortion_factor=0.25, patch_shape=None, patch_overlap=0, patch_start_offset=None,
-                       shuffle_index_list=True, skip_blank=True, permute=False, num_model=1, pred_specific=False,overlap_label=False):
-    #     pdb.set_trace()
-
-        orig_index_list = index_list
-        while True:
-            x_list = list()
-            y_list = list()
-            if patch_shape:
-                index_list = create_patch_index_list(orig_index_list, data_file, patch_shape,
-                                                     patch_overlap, patch_start_offset,pred_specific=pred_specific)
+        data = []
+        truth = []
+        for name, img in h5_file[sub_id].items():
+            if name == 'brain_width':
+                continue
+            brain_wise_img = img[brain_width[0,0]:brain_width[1,0]+1,
+                                brain_width[0,1]:brain_width[1,1]+1,
+                                brain_width[0,2]:brain_width[1,2]+1]
+            if name.split('_')[-1].split('.')[0] == 'seg':
+                truth.append(brain_wise_img)
             else:
-                index_list = copy.copy(orig_index_list)
+                data.append(brain_wise_img)
+    data = np.asarray(data)
+    truth = np.asarray(truth)
+    
+    x = get_patch_from_3d_data(data, patch_shape, patch)
+    y = get_patch_from_3d_data(truth, patch_shape, patch)
+    return x, y
 
-            if shuffle_index_list:
-                shuffle(index_list)
-            while len(index_list) > 0:
-                index = index_list.pop()
-                add_data(x_list, y_list, data_file, index, augment=augment, augment_flip=augment_flip,
-                         augment_distortion_factor=augment_distortion_factor, patch_shape=patch_shape,
-                         skip_blank=skip_blank, permute=permute)
-                if len(x_list) == batch_size or (len(index_list) == 0 and len(x_list) > 0):
-                    yield convert_data(x_list, y_list, n_labels=n_labels, labels=labels, num_model=num_model,overlap_label=overlap_label)
-    #                 convert_data(x_list, y_list, n_labels=n_labels, labels=labels, num_model=num_model)
-                    x_list = list()
-                    y_list = list()
-
-
-
-    def get_number_of_patches(data_file, index_list, patch_shape=None, patch_overlap=0, patch_start_offset=None,
-                              skip_blank=True,pred_specific=False):
-        if patch_shape:
-            index_list = create_patch_index_list(index_list, data_file, patch_shape, patch_overlap,
-                                                 patch_start_offset,pred_specific=pred_specific)
-            count = 0
-            for index in tqdm(index_list):
-                x_list = list()
-                y_list = list()
-                add_data(x_list, y_list, data_file, index, skip_blank=skip_blank, patch_shape=patch_shape)
-                if len(x_list) > 0:
-                    count += 1
-            return count
-        else:
-            return len(index_list)
+def convert_data(x_list, y_list, labels=None):
+#     pdb.set_trace()
+    x = np.asarray(x_list)
+    y = np.asarray(y_list)
+    y = get_multi_class_labels(y, labels=labels)
+    return x, y
 
 
-    def create_patch_index_list(index_list, data_file, patch_shape, patch_overlap, patch_start_offset=None, pred_specific=False):
-        patch_index = list()
-        for index in index_list:
-            brain_width = data_file.root.brain_width[index]
-            image_shape = brain_width[1] - brain_width[0] + 1
-            if pred_specific:
-                patches = compute_patch_indices_for_prediction(image_shape, patch_shape)
-            else:
-                if patch_start_offset is not None:
-                    random_start_offset = np.negative(get_random_nd_index(patch_start_offset))
-                    patches = compute_patch_indices(image_shape, patch_shape, overlap=patch_overlap, start=random_start_offset)
-                else:
-                    patches = compute_patch_indices(image_shape, patch_shape, overlap=patch_overlap)
-            patch_index.extend(itertools.product([index], patches))
-        return patch_index
-
-
-    def add_data(x_list, y_list, data_file, index, augment=False, augment_flip=False, augment_distortion_factor=0.25,
-                 patch_shape=False, skip_blank=True, permute=False):
-        '''
-        add qualified x,y to the generator list
-        '''
-    #     pdb.set_trace()
-        data, truth = get_data_from_file(data_file, index, patch_shape=patch_shape)
-
-        if np.sum(truth) == 0:
-            return
-        if augment:
-            affine = np.load('affine.npy')
-            data, truth = augment_data(data, truth, affine, flip=augment_flip, scale_deviation=augment_distortion_factor)
-
-        if permute:
-            if data.shape[-3] != data.shape[-2] or data.shape[-2] != data.shape[-1]:
-                raise ValueError("To utilize permutations, data array must be in 3D cube shape with all dimensions having "
-                                 "the same length.")
-            data, truth = random_permutation_x_y(data, truth[np.newaxis])
-        else:
-            truth = truth[np.newaxis]
-
-        if not skip_blank or np.any(truth != 0):
-            x_list.append(data)
-            y_list.append(truth)
-
-
-    def get_data_from_file(data_file, index, patch_shape=None):
-    #     pdb.set_trace()
-        if patch_shape:
-            index, patch_index = index
-            data, truth = get_data_from_file(data_file, index, patch_shape=None)
-            x = get_patch_from_3d_data(data, patch_shape, patch_index)
-            y = get_patch_from_3d_data(truth, patch_shape, patch_index)
-        else:
-            brain_width = data_file.root.brain_width[index]
-            x = np.array([modality_img[index,0,
-                                       brain_width[0,0]:brain_width[1,0]+1,
-                                       brain_width[0,1]:brain_width[1,1]+1,
-                                       brain_width[0,2]:brain_width[1,2]+1] 
-                          for modality_img in [data_file.root.t1,
-                                               data_file.root.t1ce,
-                                               data_file.root.flair,
-                                               data_file.root.t2]])
-            y = data_file.root.truth[index, 0,
-                                     brain_width[0,0]:brain_width[1,0]+1,
-                                     brain_width[0,1]:brain_width[1,1]+1,
-                                     brain_width[0,2]:brain_width[1,2]+1]
-        return x, y
-
-
-    def convert_data(x_list, y_list, n_labels=1, labels=None, num_model=1,overlap_label=False):
-    #     pdb.set_trace()
-        x = np.asarray(x_list)
-        y = np.asarray(y_list)
-        if n_labels == 1:
-            y[y > 0] = 1
-        elif n_labels > 1:
-            if overlap_label:
-                y = get_multi_class_labels_overlap(y, n_labels=n_labels, labels=labels)
-            else:
-                y = get_multi_class_labels(y, n_labels=n_labels, labels=labels)
-        if num_model == 1:
-            return x, y
-        else:
-            return [x]*num_model, y
-
-
-    def get_multi_class_labels_overlap(data, n_labels=3, labels=(1,2,4)):
-        """
+def get_multi_class_labels(truth, labels=(1,2,4)):
+    '''
+    truth.shape is (batch_size,1,patch_shape[0],patch_shape[1],patch_shape[2])
+    y.shape is (batch_size,len(labels),_,_,_)
+    truth values:
         4: ET
         1+4: TC
         1+2+4: WT
-        """
-    #     pdb.set_trace()
-        new_shape = [data.shape[0], n_labels] + list(data.shape[2:])
-        y = np.zeros(new_shape, np.int8)
+    '''
+    n_labels = len(labels)
+    new_shape = [truth.shape[0], n_labels] + list(truth.shape[2:])
+    y = np.zeros(new_shape, np.int8)
+    
+    y[:,0][np.logical_or(truth[:,0] == 1,truth[:,0] == 4)] = 1    #1
+    y[:,1][np.logical_or(truth[:,0] == 1,truth[:,0] == 2, truth[:,0] == 4)] = 1 #2
+    y[:,2][truth[:,0] == 4] = 1    #4
+    return y
 
-        y[:,0][np.logical_or(data[:,0] == 1,data[:,0] == 4)] = 1    #1
-        y[:,1][np.logical_or(data[:,0] == 1,data[:,0] == 2, data[:,0] == 4)] = 1 #2
-        y[:,2][data[:,0] == 4] = 1    #4
-        return y
+
+def get_training_and_validation_generators(config_yml='config.yml',for_final_training=False):
+    '''
+    for_final_training: if True, all subjects would be trained.
+    '''
+    with open(config_yml) as f:
+        data_config = yaml.load(f,Loader=yaml.FullLoader)['data']
+    
+    # load indices list for training and validation
+    with open(data_config['cross_val_indices'],'rb') as f:
+        cross_val_indices = pickle.load(f)
+
+    train_indices = cross_val_indices['train_list_0']
+    val_indices = cross_val_indices['val_list_0']
+    if for_final_training:
+        train_indices += val_indices
+    
+    # generator for training and validation
+    train_generator = data_generator(train_indices, 
+                                        data_config['training_h5'], 
+                                        patch_shape = data_config['patch_shape'], 
+                                        patch_overlap = data_config['patch_overlap'],
+                                        batch_size= data_config['batch_size_train'], 
+                                        labels = data_config['labels'], 
+                                        augment = data_config['augment'], 
+                                        augment_flip = data_config['augment_flip'], 
+                                        augment_distortion_factor = data_config['augment_distortion_factor'], 
+                                        permute = data_config['permute'],
+                                        affine_file = data_config['affine_file'])
+    val_generator = data_generator(val_indices, 
+                                   data_config['training_h5'], 
+                                   patch_shape = data_config['patch_shape'], 
+                                   patch_overlap = data_config['patch_overlap'],
+                                   batch_size= data_config['batch_size_val'],
+                                   labels = data_config['labels'], 
+                                   shuffle_index_list = False)
+    return train_generator, val_generator
