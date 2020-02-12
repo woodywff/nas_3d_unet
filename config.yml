@@ -29,6 +29,7 @@ data:
   augment_flip: true
   augment_distortion_factor: 0.25
   permute: true
+  skip_health: true
 model:
   arch: nas-unet
 searching:
