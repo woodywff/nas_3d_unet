@@ -8,6 +8,10 @@ import pickle
 from generator import *
 
 class Dataset():
+    '''
+    BraTS dataset pipeline for training and validation process.
+    It provides to generators for training and validation respectively.
+    '''
     def __init__(self, config_yml = 'config.yml', for_final_training=False):
         with open(config_yml) as f:
             self.data_config = yaml.load(f,Loader=yaml.FullLoader)['data']
@@ -54,8 +58,8 @@ class Generator():
                        shuffle_index_list=True, 
                        affine_file = None,
                        skip_health = True):
-        self.indices_list = indices_list
-        self.data_file = data_file
+        self.indices_list = indices_list # list of indices in .h5.keys()
+        self.data_file = data_file # .h5 file path
         self.patch_shape = [patch_shape] * 3 if isinstance(patch_shape,int) else patch_shape
         self.patch_overlap = patch_overlap
         self.batch_size = batch_size
@@ -63,10 +67,10 @@ class Generator():
         self.augment = augment
         self.augment_flip = augment_flip
         self.augment_distortion_factor = augment_distortion_factor
-        self.permute = permute
+        self.permute = permute # rotate and flip
         self.shuffle_index_list = shuffle_index_list
-        self.affine_file = affine_file
-        self.skip_health = skip_health
+        self.affine_file = affine_file # affine.npy path
+        self.skip_health = skip_health # True: skip none tumor images
     
     def generator(self):
         while True:
@@ -81,8 +85,7 @@ class Generator():
             while len(id_index_patch_list) > 0:
                 id_index_patch = id_index_patch_list.pop()
                 self.add_data(id_index_patch)
-                if len(self.x_list) == self.batch_size or 
-                  (len(id_index_patch_list) == 0 and len(self.x_list) > 0):
+                if len(self.x_list) == self.batch_size or (len(id_index_patch_list) == 0 and len(self.x_list) > 0):
                     yield self.convert_data()
     #                 convert_data()
                     self.x_list = []
