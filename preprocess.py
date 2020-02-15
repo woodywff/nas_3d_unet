@@ -9,6 +9,7 @@ import yaml
 from tqdm.notebook import tqdm
 import pickle
 import time
+from random import shuffle
 
 
 def create_h5(source_folder, overwrite=False, config_yml='config.yml'):
@@ -157,6 +158,8 @@ def cross_val_split(num_sbjs, saved_path, num_folds=5, overwrite=False):
         right = int((i+1)/num_folds * num_sbjs)
         res['train_list_{:d}'.format(i)] = subid_indices[:left] + subid_indices[right:]
         res['val_list_{:d}'.format(i)] = subid_indices[left : right]
+    for i in res.values():
+        shuffle(i)
     with open(saved_path,'wb') as f:
         pickle.dump(res,f)
     return
@@ -181,6 +184,7 @@ def preprocess(config_yml='config.yml'):
     return
 
 if __name__ == '__main__':
+    from tqdm import tqdm
     preprocess()
 
                           

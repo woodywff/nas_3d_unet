@@ -3,6 +3,7 @@ import pdb
 from dev_tools.my_tools import print_red
 import h5py
 import itertools
+from tqdm.notebook import tqdm
 
 def _patching_autofit(image_shape, patch_shape):
     '''
@@ -103,7 +104,7 @@ def create_id_index_patch_list(id_index_list, data_file, patch_shape, patch_over
     id_index_patch_list = []
     with h5py.File(data_file,'r') as h5_file:
         id_list = list(h5_file.keys())
-        for index in id_index_list:
+        for index in tqdm(id_index_list,desc = 'Creating (id_index, patch) list'):
             brain_width = h5_file[id_list[index]]['brain_width']
             image_shape = brain_width[1] - brain_width[0] + 1
             patches = patching(image_shape, patch_shape, overlap = patch_overlap)

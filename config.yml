@@ -30,58 +30,7 @@ data:
   augment_distortion_factor: 0.25
   permute: true
   skip_health: true
-model:
-  arch: nas-unet
-searching:
-  alpha_begin: 0
-  arch_optimizer:
-    lr: 0.0003
-    name: adam
-    weight_decay: 0.005
-  batch_size: 2
-  depth: 4
-  double_down_channel: false
-  epoch: 300
-  gpu: true
-  grad_clip: 5
-  init_channels: 16
-  loss:
-    aux_weight: null
-    name: cross_entropy
-    size_average: false
-  max_patience: 40
-  meta_node_num: 3
-  model_optimizer:
-    lr: 0.001
-    name: adabound
-    weight_decay: 0.0005
-  multi_gpus: true
-  n_workers: 2
-  report_freq: 20
-  resume: null
-  sharing_normal: true
-  train_portion: 0.5
-training:
-  backbone: null
-  batch_size: 1
-  depth: 6
-  double_down_channel: false
-  epoch: 800
-  geno_type: NASUNET
-  grad_clip: 5
-  init_channels: 64
-  loss:
-    aux_weight: 0.7
-    name: cross_entropy_with_dice
-  lr_schedule:
-    gamma: 0.995
-    name: exp_lr
-  max_patience: 100
-  model_optimizer:
-    lr: 0.001
-    name: adabound
-    weight_decay: 0.0005
-  multi_gpus: false
-  n_workers: 4
-  report_freq: 5
-  resume: null
+  epochs: 2
+  spe_file: data/spe.yml # steps per epoch 
+search:
+
