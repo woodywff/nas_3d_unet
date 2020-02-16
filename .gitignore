@@ -5,6 +5,7 @@
 **/test_trashcan/
 **/__pycache__/
 *.log
+**/log/
 #*/demo_run.ipynb
 #*/for_test.ipynb
 **/.ipynb_checkpoints/

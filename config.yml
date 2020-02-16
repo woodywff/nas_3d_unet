@@ -31,6 +31,8 @@ data:
   permute: true
   skip_health: true
   epochs: 2
-  spe_file: data/spe.yml # steps per epoch 
+  spe_file: data/spe.pkl # steps per epoch 
 search:
+  log_dir: log
+  save_log: false
 

@@ -6,6 +6,8 @@ from patches import create_id_index_patch_list, get_patch_from_3d_data
 from augment import do_augment, random_permutation_x_y
 import pickle
 from tqdm.notebook import tqdm
+import os
+import pdb
 
 class Dataset():
     '''
@@ -73,20 +75,40 @@ class Generator():
         self.permute = permute # rotate and flip
         self.shuffle_index_list = shuffle_index_list
         self.affine_file = affine_file # affine.npy path
-        self.spe_file = spe_file # steps per epoch .yml
+        self.spe_file = spe_file # steps per epoch .pkl
         self.skip_health = skip_health # True: skip none tumor images
         
         self.epoch_init()
         
     
     def epoch_init(self):
+        '''
+        The self.steps_per_epoch is needed by the tqdm outside the Generator class.
+        So we need to calc it before each invoking of self.epoch().
+        self.spe_file saves a dict, for each key named as spe_name we hold the corresponding spe value.
+        For a certain Generator(), the spe value mainly changes when self.patch_overlap is not None or 0,
+        that's when the overlap varies as a random int from 0 to self.patch_overlap (inclusive).
+        '''
+        patch_overlap = self.patch_overlap if not self.patch_overlap else random.randint(0,self.patch_overlap + 1)
         self.id_index_patch_list = create_id_index_patch_list(self.indices_list, 
                                                               self.data_file, 
                                                               self.patch_shape, 
-                                                              self.patch_overlap if not self.patch_overlap \
-                                                              else random.randint(0,self.patch_overlap + 1))
+                                                              patch_overlap)
         
-        self.steps_per_epoch = self.get_steps_per_epoch()
+#         pdb.set_trace()
+        if not os.path.exists(self.spe_file):
+            with open(self.spe_file, 'wb') as f:
+                pickle.dump({},f)
+        with open(self.spe_file, 'rb') as f:
+            spes = pickle.load(f)
+        spe_name = '{}{}{}{}'.format(self.indices_list[0], self.patch_shape[0], patch_overlap, self.batch_size)
+        if spes.get(spe_name) is None:
+            self.steps_per_epoch = self.get_steps_per_epoch()
+            spes[spe_name] = self.steps_per_epoch
+            with open(self.spe_file, 'wb') as f:
+                pickle.dump(spes,f)
+        else:
+            self.steps_per_epoch = spes[spe_name]
     
     def _get_num_patches(self):
         id_index_patch_list = self.id_index_patch_list.copy()
@@ -100,12 +122,13 @@ class Generator():
         return count
     
     def get_steps_per_epoch(self):
-        
-        return np.ceil(self._get_num_patches()/self.batch_size)
+        return int(np.ceil(self._get_num_patches()/self.batch_size))
         
     def epoch(self):
         '''
         A generator for one epoch.
+        If self.patch_overlap is set, for each epoch the paching results may be different, 
+        so we need to self.epoch_init() each time.
         '''
         x_list = []
         y_list = []
