@@ -35,4 +35,6 @@ data:
 search:
   log_dir: log
   save_log: false
+  gpu: true
+  multi_gpus: false
 

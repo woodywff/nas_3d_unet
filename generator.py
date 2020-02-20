@@ -101,7 +101,7 @@ class Generator():
                 pickle.dump({},f)
         with open(self.spe_file, 'rb') as f:
             spes = pickle.load(f)
-        spe_name = '{}{}{}{}'.format(self.indices_list[0], self.patch_shape[0], patch_overlap, self.batch_size)
+        spe_name = '{}_{}_{}_{}'.format(self.indices_list[0], self.patch_shape[0], patch_overlap, self.batch_size)
         if spes.get(spe_name) is None:
             self.steps_per_epoch = self.get_steps_per_epoch()
             spes[spe_name] = self.steps_per_epoch
@@ -144,8 +144,8 @@ class Generator():
 #                 convert_data()
                 x_list = []
                 y_list = []
-        
-        if not self.patch_overlap:
+        pdb.set_trace()
+        if self.patch_overlap:
             self.epoch_init()
         return    
     

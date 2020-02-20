@@ -6,6 +6,8 @@ from tensorboardX import SummaryWriter
 import logging
 import os
 import time
+import torch
+import generator
 
 class Searching():
     '''
@@ -15,6 +17,7 @@ class Searching():
         self.jupyter = jupyter
         self._init_configure()
         self._init_logger()
+        self._init_device()
         pass
     
     def _init_configure(self):
@@ -46,6 +49,23 @@ class Searching():
             self.logger.addHandler(file_handler)
         
         self.writer = SummaryWriter(os.path.join(log_dir, 'tensorboardX_log'))
+        return
+        
+    def _init_device(self):
+        if self.config['search']['gpu'] and torch.cuda.is_available() :
+            self.device = torch.device('cuda')
+            torch.backends.cudnn.enabled = True
+            torch.backends.cudnn.benchmark = True
+        else:
+            self.logger.warning('No gpu devices available!, we will use cpu')
+            self.device = torch.device('cpu')
+        return
+    
+    def _init_dataset(self):
+        dataset = generator.Dataset()
+        self.train_generator = dataset.train_generator
+        self.val_generator = dataset.val_generator
+        return
         
     def search(self):
         pass
