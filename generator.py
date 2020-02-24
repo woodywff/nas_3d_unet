@@ -144,7 +144,7 @@ class Generator():
 #                 convert_data()
                 x_list = []
                 y_list = []
-        pdb.set_trace()
+#         pdb.set_trace()
         if self.patch_overlap:
             self.epoch_init()
         return    
