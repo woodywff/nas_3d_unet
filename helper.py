@@ -10,3 +10,6 @@ import numpy as np
 #     memory_available = [int(line.split(':')[1].split(' ')[1]) for line in rst if 'Free' in line][::2]
 #     max_id = int(np.argmax(memory_available))
 #     return max_id, memory_available
+
+def calc_param_size(model):
+    return np.sum(np.prod(v.size()) for v in model.parameters())*4e-6

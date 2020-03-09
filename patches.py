@@ -3,7 +3,8 @@ import pdb
 from dev_tools.my_tools import print_red
 import h5py
 import itertools
-from tqdm.notebook import tqdm
+# from tqdm.notebook import tqdm
+from tqdm import tqdm
 
 def _patching_autofit(image_shape, patch_shape):
     '''

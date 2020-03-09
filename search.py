@@ -1,13 +1,15 @@
 import pdb
 import argparse
 import yaml
-from tqdm.notebook import tqdm
 from tensorboardX import SummaryWriter
 import logging
 import os
 import time
 import torch
 import generator
+from loss import WeightedDiceLoss
+from helper import calc_param_size
+from nas import NasShell
 
 class Searching():
     '''
@@ -18,7 +20,10 @@ class Searching():
         self._init_configure()
         self._init_logger()
         self._init_device()
-        pass
+        self._init_dataset()
+        self._init_model()
+        
+        
     
     def _init_configure(self):
         parser = argparse.ArgumentParser()
@@ -28,7 +33,6 @@ class Searching():
             self.args = parser.parse_args(args=[])
         else:  # for shell
             self.args = parser.parse_args()
-            from tqdm import tqdm
         
         with open(self.args.config) as f:
             self.config = yaml.load(f, Loader=yaml.FullLoader)
@@ -66,6 +70,21 @@ class Searching():
         self.train_generator = dataset.train_generator
         self.val_generator = dataset.val_generator
         return
+    
+    def _init_model(self):
+        # Setup loss function
+        self.loss = WeightedDiceLoss().to(self.device)
+        # Setup Model
+        self.model = NasShell(in_channels=len(self.config['data']['all_mods']), 
+                              init_n_kernels=self.config['search']['init_n_kernels'], 
+                              out_channels=len(self.config['data']['labels']), 
+                              depth=self.config['search']['depth'], 
+                              n_nodes=self.config['search']['n_nodes'],
+                              device=self.device,
+                              normal_w_share=self.config['search']['normal_w_share'], 
+                              channel_change=self.config['search']['channel_change']).to(self.device)
+        
+        self.logger.info('param size = %.3f MB', calc_param_size(self.model))
         
     def search(self):
         pass
@@ -76,7 +95,10 @@ class Searching():
     def infer(self):
         pass
     
-    def log_clear(self):
+    def _log_clear(self):
+        '''
+        This is going to be put in the end of this class.
+        '''
         while self.logger.handlers:
             self.logger.handlers.pop()
         return
@@ -88,7 +110,6 @@ def test():
         print(i)
     
 if __name__ == '__main__':
-    from tqdm import tqdm
     search_network = Searching(jupyter = False)
-    test()
+#     test()
 #     search_network.run()

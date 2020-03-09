@@ -5,7 +5,8 @@ import h5py
 from patches import create_id_index_patch_list, get_patch_from_3d_data
 from augment import do_augment, random_permutation_x_y
 import pickle
-from tqdm.notebook import tqdm
+# from tqdm.notebook import tqdm
+from tqdm import tqdm
 import os
 import pdb
 
@@ -36,7 +37,6 @@ class Dataset():
                          patch_shape = self.data_config['patch_shape'], 
                          patch_overlap = self.data_config['patch_overlap'],
                          batch_size= self.data_config['batch_size_train'], 
-                         epochs = self.data_config['epochs'],
                          labels = self.data_config['labels'], 
                          augment = self.data_config['augment'], 
                          augment_flip = self.data_config['augment_flip'], 
@@ -57,7 +57,7 @@ class Dataset():
 class Generator():
     def __init__(self, indices_list, data_file, 
                        patch_shape, patch_overlap = None, 
-                       batch_size=1, epochs=1, labels=None, 
+                       batch_size=1, labels=None, 
                        augment=False, augment_flip=True, augment_distortion_factor=0.25, permute=False,
                        shuffle_index_list=True, 
                        affine_file = None, spe_file = None,
@@ -67,7 +67,6 @@ class Generator():
         self.patch_shape = [patch_shape] * 3 if isinstance(patch_shape,int) else patch_shape
         self.patch_overlap = patch_overlap
         self.batch_size = batch_size
-        self.epochs = epochs
         self.labels = labels
         self.augment = augment
         self.augment_flip = augment_flip
