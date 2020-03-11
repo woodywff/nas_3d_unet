@@ -3,12 +3,10 @@ import torch.nn as nn
 import pdb
 
 OPS = {
-    'none': lambda c, stride, affine, dp: ZeroOp(c, c, stride=stride),
     'identity': lambda c, stride, affine, dp: IdentityOp(c, c, affine=affine),
     'cweight': lambda c, stride, affine, dp: CWeightOp(c, c, affine=affine, dropout_rate=dp),
     'dil_conv': lambda c, stride, affine, dp: ConvOps(c, c, affine=affine, dilation=2, dropout_rate=dp),
     'dep_conv': lambda c, stride, affine, dp: ConvOps(c, c, affine=affine, use_depthwise=True, dropout_rate=dp),
-    'shuffle_conv': lambda c, stride, affine, dp: ConvOps(c, c, affine=affine),# ConvOps(c, c, affine=affine, has_shuffle=True)
     'conv': lambda c, stride, affine, dp: ConvOps(c, c, affine=affine, has_shuffle=True),
     'avg_pool': lambda c, stride, affine, dp: PoolingOp(c, c, affine=affine, pool_type='avg'),
     'max_pool': lambda c, stride, affine, dp: PoolingOp(c, c, affine=affine,pool_type='max'),
@@ -51,64 +49,25 @@ NormOps = [
 
 class BaseOp(nn.Module):
 
-    def __init__(self, in_channels, out_channels, norm_type='gn', use_norm=True, affine=True,
-                 act_func='relu', dropout_rate=0, ops_order='weight_norm_act' ):
+    def __init__(self, in_channels, out_channels, 
+                 dropout_rate=0, ops_order='weight_norm_act' ):
         super().__init__()
-
-        self.ops_order = ops_order
+        self.ops_list = ops_order.split('_')
         
-
-        # batch norm, group norm, instance norm, layer norm
-        if use_norm:
-            # Ref: <Group Normalization> https://arxiv.org/abs/1803.08494
-            # 16 channels for one group is best
-            if self.norm_before_weight:
-                group = 1 if in_channels % 16 != 0 else in_channels // 16
-                if norm_type == 'gn':
-                    self.norm = nn.GroupNorm(group, in_channels, affine=affine)
-                else:
-                    self.norm = nn.BatchNorm2d(in_channels, affine=affine)
-            else:
-                group = 1 if out_channels % 16 != 0 else out_channels // 16
-                if norm_type == 'gn':
-                    self.norm = nn.GroupNorm(group, out_channels, affine=affine)
-                else:
-                    self.norm = nn.BatchNorm2d(out_channels, affine=affine)
+        # We use nn.GroupNorm cause our batch_size is too small.
+        # Ref: <Group Normalization> https://arxiv.org/abs/1803.08494
+        # 16 channels for one group is best
+        if 'norm' in self.ops_list:
+            group = 1 if out_channels % 16 != 0 else out_channels // 16
+            self.norm = nn.GroupNorm(group, out_channels)
         else:
             self.norm = None
 
         # activation
-        if act_func == 'relu':
-            if self.ops_list[0] == 'act':
-                self.activation = nn.ReLU(inplace=False)
-            else:
-                self.activation = nn.ReLU(inplace=True)
-        elif act_func == 'relu6':
-            if self.ops_list[0] == 'act':
-                self.activation = nn.ReLU6(inplace=False)
-            else:
-                self.activation = nn.ReLU6(inplace=True)
-        else:
-            self.activation = None
+        self.activation = nn.ReLU() if 'act' in self.ops_list else None
 
         # dropout
-        if dropout_rate > 0:
-            self.dropout = nn.Dropout2d(dropout_rate, inplace=False)
-        else:
-            self.dropout = None
-
-    @property
-    def ops_list(self):
-        return self.ops_order.split('_')
-
-    @property
-    def norm_before_weight(self):
-        for op in self.ops_list:
-            if op == 'norm':
-                return True
-            elif op == 'weight':
-                return False
-        raise ValueError('Invalid ops_order: %s' % self.ops_order)
+        self.dropout = nn.Dropout3d(dropout_rate) if dropout_rate > 0 else None
 
     def forward(self, x):
         for op in self.ops_list:
@@ -130,56 +89,31 @@ class BaseOp(nn.Module):
 
 class ConvOps(BaseOp):
 
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1,dilation=1,groups=1,
-                 bias=False, use_transpose=False, output_padding=0, use_depthwise=False,
-                 norm_type='gn', use_norm=True, affine=True, act_func='relu', dropout_rate=0,
-                 ops_order='weight_norm_act'):
+    def __init__(self, in_channels, out_channels, kernel_size, 
+                 stride=1, dilation=1, use_transpose=False, use_depthwise=False,
+                 dropout_rate=0, ops_order='weight_norm_act'):
         
-        super().__init__(in_channels, out_channels, norm_type, 
-                         use_norm, affine, act_func, dropout_rate, ops_order)
-
-        self.kernel_size = kernel_size
-        self.stride = stride
-        self.dilation = dilation
-        self.groups = groups
-        self.bias = bias
-        self.has_shuffle = has_shuffle
-        self.use_transpose = use_transpose
+        super().__init__(in_channels, out_channels, dropout_rate, ops_order)
         self.use_depthwise = use_depthwise
-        self.output_padding = output_padding
-        
-        return
 
-        # I'm afraid it only works for dilation=1
-        padding = get_same_padding(self.kernel_size)
-        if isinstance(padding, int):
-            padding *= self.dilation
-        else:
-            padding[0] *= self.dilation
-            padding[1] *= self.dilation
+        padding = (dilation * (kernel_size - 1) - stride + 1) // 2
 
-        # 'kernel_size', 'stride', 'padding', 'dilation' can either be 'int' or 'tuple' of int
         if use_transpose:
-            if use_depthwise: # 1. transpose depth-wise conv
-                self.depth_conv = nn.ConvTranspose2d(in_channels, in_channels, kernel_size=self.kernel_size,
-                        stride=self.stride, padding=padding, output_padding=self.output_padding, groups=in_channels, bias=self.bias)
-                self.point_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1,
-                                            groups=self.groups, bias=False)
-            else: # 2. transpose conv
-                self.conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=self.kernel_size,
-                            stride=self.stride, padding=padding,
-                            output_padding=self.output_padding, dilation=self.dilation, bias=self.bias)
+            if use_depthwise: 
+                self.depth_conv = nn.ConvTranspose3d(in_channels, in_channels, kernel_size,
+                                                     stride=stride, padding=padding, groups=in_channels)
+                self.point_conv = nn.Conv3d(in_channels, out_channels, kernel_size=1)
+            else: 
+                self.conv = nn.ConvTranspose3d(in_channels, out_channels, kernel_size,
+                                               stride=stride, padding=padding, dilation=dilation)
         else:
-            if use_depthwise: # 3. depth-wise conv
-                self.depth_conv = nn.Conv2d(in_channels, in_channels, kernel_size=self.kernel_size,
-                        stride=self.stride, padding=padding,
-                        dilation=self.dilation, groups=in_channels, bias=False)
-                self.point_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1,
-                                            groups=self.groups, bias=False)
-            else: # 4. conv
-                self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=self.kernel_size,
-                            stride=self.stride, padding=padding,
-                            dilation=self.dilation, bias=False)
+            if use_depthwise: 
+                self.depth_conv = nn.Conv3d(in_channels, in_channels, kernel_size,
+                                            stride=stride, padding=padding, groups=in_channels)
+                self.point_conv = nn.Conv3d(in_channels, out_channels, kernel_size=1)
+            else: 
+                self.conv = nn.Conv3d(in_channels, out_channels, kernel_size,
+                                      stride=stride, padding=padding, dilation=dilation)
 
     def weight_call(self, x):
         if self.use_depthwise:
@@ -187,12 +121,9 @@ class ConvOps(BaseOp):
             x = self.point_conv(x)
         else:
             x = self.conv(x)
-        if self.has_shuffle and self.groups > 1:
-            pdb.set_trace()
-            x = shuffle_layer(x, self.groups)
         return x
 
-class CWeightOp(BaseOp):
+class SEConvOp(BaseOp):
 
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1,dilation=1, groups=None,
                  bias=False, has_shuffle=False, use_transpose=False,output_padding=0, norm_type='gn',

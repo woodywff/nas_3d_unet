@@ -1,34 +1,37 @@
 from torch.functional import F
-from prim_ops import *
+from prim_ops import OPS, DownOps, UpOps, NormOps
 # from util.utils import consistent_dim
-# from util.genotype import CellLinkDownPos, CellLinkUpPos, CellPos
 import pdb
 
 
 class MixedOp(nn.Module):
 
-    def __init__(self, c, stride, use_transpose=False):
-        super(MixedOp, self).__init__()
+    def __init__(self, c_node, stride, use_transpose=False):
+        '''
+        c_node: in_channels == out_channels for MixedOp
+        '''
+        super().__init__()
         self._ops = nn.ModuleList()
         if stride >= 2: # down or up edge
-            primitives = CellLinkUpPos if use_transpose else CellLinkDownPos
+            primitives = UpOps if use_transpose else DownOps
             self._op_type = 'up_or_down'
         else:
-            primitives = CellPos
+            primitives = NormOps
             self._op_type = 'normal'
         for pri in primitives:
-            op = OPS[pri](c, stride, affine=False, dp=0)
+            op = OPS[pri](c_node, stride)
             self._ops.append(op)
 
-    def forward(self, x, weights1, weights2):
-        # weights1: M * 1 where M is the number of normal primitive operations
-        # weights1: K * 1 where K is the number of up or down primitive operations
-        # Todo: we have three different weights
+    def forward(self, x, w1, w2):
+        '''
+        w1: normal, stride=1
+        w2: up_or_down, stride=2
+        '''
 
         if self._op_type == 'up_or_down':
-            rst = sum(w * op(x) for w, op in zip(weights2, self._ops))
+            rst = sum(w * op(x) for w, op in zip(w2, self._ops))
         else:
-            rst = sum(w * op(x) for w, op in zip(weights1, self._ops))
+            rst = sum(w * op(x) for w, op in zip(w1, self._ops))
 
         return rst
 

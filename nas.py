@@ -33,7 +33,7 @@ class KernelNet(nn.Module):
             c_node = c_node // 2 if channel_change else c_node  # halve the number of filters
 
         self.last_conv = ConvOps(c1, out_channels, kernel_size=1, 
-                                         dropout_rate=0.1, ops_order='weight')
+                                 dropout_rate=0.1, ops_order='weight')
 
     def forward(self, x, w1_down, w1_up, w2_down, w2_up):
         s0, s1 = self.stem0(x), self.stem1(x)
