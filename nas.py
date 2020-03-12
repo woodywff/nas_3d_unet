@@ -73,6 +73,10 @@ class NasShell(nn.Module):
         self._init_alphas()
         
     def _init_alphas(self):
+        '''
+        alphas_down, alphas_up: params for MixedOp with stride=2
+        alphas_normal_down, alphas_normal_up: params for MixedOp with stride=1
+        '''
         n_ops = sum(range(2, 2 + self.n_nodes))
         self.alphas_down  = nn.Parameter(torch.zeros((n_ops, len(DownOps))))
         self.alphas_up = nn.Parameter(torch.zeros((n_ops, len(UpOps))))

@@ -1,4 +1,5 @@
 from torch.functional import F
+import torch.nn as nn
 from prim_ops import OPS, DownOps, UpOps, NormOps
 # from util.utils import consistent_dim
 import pdb
@@ -29,11 +30,11 @@ class MixedOp(nn.Module):
         '''
 
         if self._op_type == 'up_or_down':
-            rst = sum(w * op(x) for w, op in zip(w2, self._ops))
+            res = sum(w * op(x) for w, op in zip(w2, self._ops))
         else:
-            rst = sum(w * op(x) for w, op in zip(w1, self._ops))
+            res = sum(w * op(x) for w, op in zip(w1, self._ops))
 
-        return rst
+        return res
 
 class Cell(nn.Module):
 

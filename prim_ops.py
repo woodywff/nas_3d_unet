@@ -3,48 +3,46 @@ import torch.nn as nn
 import pdb
 
 OPS = {
-    'identity': lambda c, stride, affine, dp: IdentityOp(c, c, affine=affine),
-    'cweight': lambda c, stride, affine, dp: CWeightOp(c, c, affine=affine, dropout_rate=dp),
-    'dil_conv': lambda c, stride, affine, dp: ConvOps(c, c, affine=affine, dilation=2, dropout_rate=dp),
-    'dep_conv': lambda c, stride, affine, dp: ConvOps(c, c, affine=affine, use_depthwise=True, dropout_rate=dp),
-    'conv': lambda c, stride, affine, dp: ConvOps(c, c, affine=affine, has_shuffle=True),
-    'avg_pool': lambda c, stride, affine, dp: PoolingOp(c, c, affine=affine, pool_type='avg'),
-    'max_pool': lambda c, stride, affine, dp: PoolingOp(c, c, affine=affine,pool_type='max'),
-    'down_cweight': lambda c, stride, affine, dp: CWeightOp(c, c, stride=2, affine=affine, dropout_rate=dp),
-    'down_dil_conv': lambda c, stride, affine, dp: ConvOps(c, c, stride=2, affine=affine, dilation=2, dropout_rate=dp),
-    'down_dep_conv': lambda c, stride, affine, dp: ConvOps(c, c, stride=2, affine=affine, use_depthwise=True, dropout_rate=dp),
-    'down_conv': lambda c, stride, affine, dp: ConvOps(c, c, stride=2, affine=affine, dropout_rate=dp),
-    'up_cweight': lambda c, stride, affine, dp: CWeightOp(c, c, stride=2, affine=affine,use_transpose=True, dropout_rate=dp),
-    'up_dep_conv': lambda c, stride, affine, dp: ConvOps(c, c, stride=2, affine=affine,use_depthwise=True, use_transpose=True, dropout_rate=dp),
-    'up_conv': lambda c, stride, affine, dp: ConvOps(c, c, stride=2, affine=affine, use_transpose=True, dropout_rate=dp),
-    'up_dil_conv': lambda c, stride, affine, dp: ConvOps(c, c, stride=2, affine=affine, dilation=2,use_transpose=True,  dropout_rate=dp),
+'identity':      lambda c, stride: IdentityOp(c, c),
+'se_conv':       lambda c, stride: SEConvOp(c, c),
+'dil_conv':      lambda c, stride: ConvOps(c, c, dilation=2),
+'dep_conv':      lambda c, stride: ConvOps(c, c, use_depthwise=True),
+'conv':          lambda c, stride: ConvOps(c, c),
+'avg_pool':      lambda c, stride: PoolingOp(c, c, pool_type='avg'),
+'max_pool':      lambda c, stride: PoolingOp(c, c, pool_type='max'),
+'down_se_conv':  lambda c, stride: SEConvOp(c, c, stride=2),
+'down_dil_conv': lambda c, stride: ConvOps(c, c, stride=2, dilation=2),
+'down_dep_conv': lambda c, stride: ConvOps(c, c, stride=2, use_depthwise=True),
+'down_conv':     lambda c, stride: ConvOps(c, c, stride=2),
+'up_se_conv':    lambda c, stride: SEConvOp(c, c, stride=2, use_transpose=True),
+'up_dep_conv':   lambda c, stride: ConvOps(c, c, stride=2, use_depthwise=True, use_transpose=True),
+'up_conv':       lambda c, stride: ConvOps(c, c, stride=2, use_transpose=True),
+'up_dil_conv':   lambda c, stride: ConvOps(c, c, stride=2, dilation=2, use_transpose=True)
 }
-
+        
 DownOps = [
-    'avg_pool',
-    'max_pool',
-    'down_cweight',
-    'down_dil_conv',
-    'down_dep_conv',
-    'down_conv'
+'avg_pool',
+'max_pool',
+'down_se_conv',
+'down_dil_conv',
+'down_dep_conv',
+'down_conv'
 ]
 
 UpOps = [
-    'up_cweight',
-    'up_dep_conv',
-    'up_conv',
-    'up_dil_conv'
+'up_se_conv',
+'up_dep_conv',
+'up_conv',
+'up_dil_conv'
 ]
 
 NormOps = [
-    'identity',
-    'cweight',
-    'dil_conv',
-    'dep_conv',
-    'conv',
+'identity',
+'se_conv',
+'dil_conv',
+'dep_conv',
+'conv'
 ]
-
-
 
 
 class BaseOp(nn.Module):
@@ -55,7 +53,7 @@ class BaseOp(nn.Module):
         self.ops_list = ops_order.split('_')
         
         # We use nn.GroupNorm cause our batch_size is too small.
-        # Ref: <Group Normalization> https://arxiv.org/abs/1803.08494
+        # Ref: https://arxiv.org/abs/1803.08494
         # 16 channels for one group is best
         if 'norm' in self.ops_list:
             group = 1 if out_channels % 16 != 0 else out_channels // 16
@@ -83,23 +81,22 @@ class BaseOp(nn.Module):
                 if self.activation is not None:
                     x = self.activation(x)
             else:
-                raise ValueError('Unrecognized op: %s' % op)
+                raise Warning('Unrecognized op: %s' % op)
         return x
 
 
 class ConvOps(BaseOp):
-
-    def __init__(self, in_channels, out_channels, kernel_size, 
+    def __init__(self, in_channels, out_channels, kernel_size=3, 
                  stride=1, dilation=1, use_transpose=False, use_depthwise=False,
                  dropout_rate=0, ops_order='weight_norm_act'):
         
         super().__init__(in_channels, out_channels, dropout_rate, ops_order)
+        
         self.use_depthwise = use_depthwise
-
         padding = (dilation * (kernel_size - 1) - stride + 1) // 2
 
         if use_transpose:
-            if use_depthwise: 
+            if use_depthwise: # Ref: https://arxiv.org/abs/1704.04861
                 self.depth_conv = nn.ConvTranspose3d(in_channels, in_channels, kernel_size,
                                                      stride=stride, padding=padding, groups=in_channels)
                 self.point_conv = nn.Conv3d(in_channels, out_channels, kernel_size=1)
@@ -124,54 +121,42 @@ class ConvOps(BaseOp):
         return x
 
 class SEConvOp(BaseOp):
-
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1,dilation=1, groups=None,
-                 bias=False, has_shuffle=False, use_transpose=False,output_padding=0, norm_type='gn',
-                 use_norm=False, affine=True, act_func=None, dropout_rate=0, ops_order='weight'):
-        super(CWeightOp, self).__init__(in_channels, out_channels, norm_type, use_norm, affine, act_func, dropout_rate, ops_order)
-
-        self.kernel_size = kernel_size
+    '''
+    Squeeze and Excitation Conv
+    Ref: https://arxiv.org/abs/1709.01507
+    '''
+    def __init__(self, in_channels, out_channels, kernel_size=3, 
+                 stride=1, dilation=1, use_transpose=False,
+                 dropout_rate=0, ops_order='weight_norm'):
+        super().__init__(in_channels, out_channels, dropout_rate, ops_order)
+        
         self.stride = stride
-        self.dilation = dilation
-        self.groups = groups
-        self.bias = bias
-        self.has_shuffle = has_shuffle
-        self.use_transpose = use_transpose
-        self.output_padding = output_padding
+        padding = (dilation * (kernel_size - 1) - stride + 1) // 2
 
-        padding = get_same_padding(self.kernel_size)
-        if isinstance(padding, int):
-            padding *= self.dilation
-        else:
-            padding[0] *= self.dilation
-            padding[1] *= self.dilation
-
-        # `kernel_size`, `stride`, `padding`, `dilation`
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.avg_pool = nn.AdaptiveAvgPool3d(1)
         self.fc = nn.Sequential(
-            nn.Linear(in_channels, in_channels // 16),
-            nn.ReLU(inplace=True),
-            nn.Linear(in_channels // 16, out_channels),
+            nn.Linear(in_channels, 1),
+            nn.ReLU(),
+            nn.Linear(1, out_channels),
             nn.Sigmoid()
         )
+        
         if stride >= 2:
             if use_transpose:
-                self.conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=self.kernel_size,
-                                               stride=self.stride, padding=padding, output_padding=self.output_padding,
-                                                bias=False)
+                self.conv = nn.ConvTranspose3d(in_channels, out_channels, kernel_size,
+                                               stride=stride, padding=padding)
             else:
-                self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size,
-                                      stride=stride, padding=padding, bias=False)
-            group = 1 if out_channels % 16 != 0 else out_channels // 16
-            self.norm = nn.GroupNorm(group, out_channels, affine=affine)
-
+                self.conv = nn.Conv3d(in_channels, out_channels, kernel_size,
+                                      stride=stride, padding=padding)
+        else:
+            self.norm = None
 
     def weight_call(self, x):
-        b, c, _, _ = x.size()
-        y = self.avg_pool(x).view(b, c)
-        y = self.fc(y).view(b, c, 1, 1)
-        rst = self.norm(self.conv(x*y)) if self.stride >= 2 else x*y
-        return rst
+        batch_size, channels = x.size()[:2]
+        y = self.avg_pool(x).view(batch_size, channels)
+        y = self.fc(y).view(batch_size, channels, 1, 1, 1)
+        res = self.conv(x*y) if self.stride >= 2 else x*y
+        return res
 
 
 class PoolingOp(BaseOp):
