@@ -1,5 +1,4 @@
 import torch.nn as nn
-# from util.utils import *
 import pdb
 
 OPS = {
@@ -160,24 +159,14 @@ class SEConvOp(BaseOp):
 
 
 class PoolingOp(BaseOp):
+    def __init__(self, in_channels, out_channels, pool_type, 
+                 kernel_size=2, stride=2, ops_order='weight'):
+        super().__init__(in_channels, out_channels, ops_order=ops_order)
 
-    def __init__(self, in_channels, out_channels, pool_type, kernel_size=2, stride=2,
-                 norm_type='gn', use_norm=False, affine=True, act_func=None, dropout_rate=0, ops_order='weight'):
-        super(PoolingOp, self).__init__(in_channels, out_channels, norm_type, use_norm, affine, act_func, dropout_rate, ops_order)
-
-        self.pool_type = pool_type
-        self.kernel_size = kernel_size
-        self.stride = stride
-
-        if self.stride == 1:
-            padding = get_same_padding(self.kernel_size)
-        else:
-            padding = 0
-
-        if self.pool_type == 'avg':
-            self.pool = nn.AvgPool2d(self.kernel_size, stride=self.stride, padding=padding, count_include_pad=False)
-        elif self.pool_type == 'max':
-            self.pool = nn.MaxPool2d(self.kernel_size, stride=self.stride, padding=padding)
+        if pool_type == 'avg':
+            self.pool = nn.AvgPool3d(kernel_size, stride=stride)
+        elif pool_type == 'max':
+            self.pool = nn.MaxPool3d(kernel_size, stride=stride)
         else:
             raise NotImplementedError
 
@@ -186,10 +175,8 @@ class PoolingOp(BaseOp):
 
 class IdentityOp(BaseOp):
 
-    def __init__(self, in_channels, out_channels, norm_type='gn', use_norm=False, affine=True,
-                 act_func=None, dropout_rate=0, ops_order='weight_norm_act'):
-        super(IdentityOp, self).__init__(in_channels, out_channels, norm_type,use_norm, affine,
-                                          act_func, dropout_rate, ops_order)
+    def __init__(self, in_channels, out_channels, ops_order='weight_norm_act'):
+        super().__init__(in_channels, out_channels, ops_order=ops_order)
     def weight_call(self, x):
         return x
 

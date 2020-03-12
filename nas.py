@@ -17,7 +17,7 @@ class KernelNet(nn.Module):
         self.down_cells = nn.ModuleList()
         self.up_cells = nn.ModuleList()
 
-        down_channels = [c1, c0]
+        down_channels = [c0, c1]
         for i in range(depth):
             c_node = 2 * c_node if channel_change else c_node  # double the number of filters
             down_cell = Cell(n_nodes, c0, c1, c_node, cell_type='down')
