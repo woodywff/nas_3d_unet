@@ -6,20 +6,20 @@ import pdb
 
 
 class MixedOp(nn.Module):
-    def __init__(self, c_node, stride, use_transpose=False):
+    def __init__(self, channels, stride, transposed=False):
         '''
-        c_node: in_channels == out_channels for MixedOp
+        channels: in_channels == out_channels for MixedOp
         '''
         super().__init__()
         self._ops = nn.ModuleList()
         if stride >= 2: # down or up edge
-            primitives = UpOps if use_transpose else DownOps
+            primitives = UpOps if transposed else DownOps
             self._op_type = 'up_or_down'
         else:
             primitives = NormOps
             self._op_type = 'normal'
         for pri in primitives:
-            op = OPS[pri](c_node, stride)
+            op = OPS[pri](channels, stride)
             self._ops.append(op)
 
     def forward(self, x, w1, w2):
@@ -35,25 +35,32 @@ class MixedOp(nn.Module):
 
 class Cell(nn.Module):
     def __init__(self, n_nodes, c0, c1, c_node, cell_type):
+        '''
+        n_nodes: How many nodes in a cell.
+        c0, c1: in_channels for two inputs.
+        c_node: out_channels for each node.
+        cell_type: 'up' or 'down'
+        '''
         super().__init__()
         self.n_nodes = n_nodes
         self.c_node = c_node
         self._n_node_inputs = 2 # Each node finally has two inputs.
 
-        if cell_type == 'down':
-            self.preprocess0 = ConvOps(c0, c_node, kernel_size=1, stride=2, ops_order='act_weight_norm')
-        else:
-            self.preprocess0 = ConvOps(c0, c_node, kernel_size=1, ops_order='act_weight_norm')
+        self.preprocess0 = ConvOps(c0, c_node, kernel_size=1, 
+                                   stride = 2 if cell_type == 'down' else 1, 
+                                   ops_order='act_weight_norm')
         self.preprocess1 = ConvOps(c1, c_node, kernel_size=1, ops_order='act_weight_norm')
 
         self._ops = nn.ModuleList()
+        
+        for n_edges in range(2, 2+n_nodes):
+            for i in range(n_edges):
+                if cell_type == 'down':
+                    self._ops.append(MixedOp(c_node, stride = 2 if i <= 1 else 1))
+                else:
+                    self._ops.append(MixedOp(c_node, stride = 2 if i == 1 else 1, transposed = True))
+        return
 
-        idx_up_or_down_start = 0 if cell_type == 'down' else 1
-        for i in range(self.n_nodes):
-            for j in range(self._n_node_inputs + i): # the input id for remaining meta-node
-                stride = 2 if j < 2 and j >= idx_up_or_down_start else 1
-                op = MixedOp(c_node, stride, use_transpose=True) if cell_type=='up' else MixedOp(c_node, stride)
-                self._ops.append(op)
     @property
     def out_channels(self):
         return self.n_nodes * self.c_node

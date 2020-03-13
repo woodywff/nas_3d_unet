@@ -5,18 +5,18 @@ OPS = {
 'identity':      lambda c, stride: IdentityOp(c, c),
 'se_conv':       lambda c, stride: SEConvOp(c, c),
 'dil_conv':      lambda c, stride: ConvOps(c, c, dilation=2),
-'dep_conv':      lambda c, stride: ConvOps(c, c, use_depthwise=True),
+'dep_conv':      lambda c, stride: ConvOps(c, c, depthwised=True),
 'conv':          lambda c, stride: ConvOps(c, c),
 'avg_pool':      lambda c, stride: PoolingOp(c, c, pool_type='avg'),
 'max_pool':      lambda c, stride: PoolingOp(c, c, pool_type='max'),
 'down_se_conv':  lambda c, stride: SEConvOp(c, c, stride=2),
 'down_dil_conv': lambda c, stride: ConvOps(c, c, stride=2, dilation=2),
-'down_dep_conv': lambda c, stride: ConvOps(c, c, stride=2, use_depthwise=True),
+'down_dep_conv': lambda c, stride: ConvOps(c, c, stride=2, depthwised=True),
 'down_conv':     lambda c, stride: ConvOps(c, c, stride=2),
-'up_se_conv':    lambda c, stride: SEConvOp(c, c, stride=2, use_transpose=True),
-'up_dep_conv':   lambda c, stride: ConvOps(c, c, stride=2, use_depthwise=True, use_transpose=True),
-'up_conv':       lambda c, stride: ConvOps(c, c, stride=2, use_transpose=True),
-'up_dil_conv':   lambda c, stride: ConvOps(c, c, stride=2, dilation=2, use_transpose=True)
+'up_se_conv':    lambda c, stride: SEConvOp(c, c, stride=2, transposed=True),
+'up_dep_conv':   lambda c, stride: ConvOps(c, c, stride=2, depthwised=True, transposed=True),
+'up_conv':       lambda c, stride: ConvOps(c, c, stride=2, transposed=True),
+'up_dil_conv':   lambda c, stride: ConvOps(c, c, stride=2, dilation=2, transposed=True)
 }
         
 DownOps = [
@@ -86,16 +86,16 @@ class BaseOp(nn.Module):
 
 class ConvOps(BaseOp):
     def __init__(self, in_channels, out_channels, kernel_size=3, 
-                 stride=1, dilation=1, use_transpose=False, use_depthwise=False,
+                 stride=1, dilation=1, transposed=False, depthwised=False,
                  dropout_rate=0, ops_order='weight_norm_act'):
         
         super().__init__(in_channels, out_channels, dropout_rate, ops_order)
         
-        self.use_depthwise = use_depthwise
+        self.depthwised = depthwised
         padding = (dilation * (kernel_size - 1) - stride + 1) // 2
 
-        if use_transpose:
-            if use_depthwise: # Ref: https://arxiv.org/abs/1704.04861
+        if transposed:
+            if depthwised: # Ref: https://arxiv.org/abs/1704.04861
                 self.depth_conv = nn.ConvTranspose3d(in_channels, in_channels, kernel_size,
                                                      stride=stride, padding=padding, groups=in_channels)
                 self.point_conv = nn.Conv3d(in_channels, out_channels, kernel_size=1)
@@ -103,7 +103,7 @@ class ConvOps(BaseOp):
                 self.conv = nn.ConvTranspose3d(in_channels, out_channels, kernel_size,
                                                stride=stride, padding=padding, dilation=dilation)
         else:
-            if use_depthwise: 
+            if depthwised: 
                 self.depth_conv = nn.Conv3d(in_channels, in_channels, kernel_size,
                                             stride=stride, padding=padding, groups=in_channels)
                 self.point_conv = nn.Conv3d(in_channels, out_channels, kernel_size=1)
@@ -112,7 +112,7 @@ class ConvOps(BaseOp):
                                       stride=stride, padding=padding, dilation=dilation)
 
     def weight_call(self, x):
-        if self.use_depthwise:
+        if self.depthwised:
             x = self.depth_conv(x)
             x = self.point_conv(x)
         else:
@@ -125,7 +125,7 @@ class SEConvOp(BaseOp):
     Ref: https://arxiv.org/abs/1709.01507
     '''
     def __init__(self, in_channels, out_channels, kernel_size=3, 
-                 stride=1, dilation=1, use_transpose=False,
+                 stride=1, dilation=1, transposed=False,
                  dropout_rate=0, ops_order='weight_norm'):
         super().__init__(in_channels, out_channels, dropout_rate, ops_order)
         
@@ -141,7 +141,7 @@ class SEConvOp(BaseOp):
         )
         
         if stride >= 2:
-            if use_transpose:
+            if transposed:
                 self.conv = nn.ConvTranspose3d(in_channels, out_channels, kernel_size,
                                                stride=stride, padding=padding)
             else:
