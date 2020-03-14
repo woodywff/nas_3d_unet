@@ -1,5 +1,7 @@
-import subprocess
+# import subprocess
 import numpy as np
+from torch.nn.functional import interpolate
+import pdb
 
 # def get_gpus_memory_info():
 #     '''
@@ -13,3 +15,13 @@ import numpy as np
 
 def calc_param_size(model):
     return np.sum(np.prod(v.size()) for v in model.parameters())*4e-6
+
+def consistent_dim(tensor_list):
+    pdb.set_trace()
+    shape = tensor_list[0].size()
+    for t in tensor_list:
+        assert shape == t.size(), 'inconsistent dim for Add!'
+        
+    
+    dims = tuple(np.max([tensor.size() for tensor in tensor_list], axis=0)[-3:])
+    return [interpolate(tensor, dim) for tensor in tensor_list]

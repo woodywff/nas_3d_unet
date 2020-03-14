@@ -1,7 +1,7 @@
 from torch.functional import F
 import torch.nn as nn
 from prim_ops import OPS, DownOps, UpOps, NormOps, ConvOps
-# from util.utils import consistent_dim
+from helper import consistent_dim
 import pdb
 
 
@@ -44,7 +44,6 @@ class Cell(nn.Module):
         super().__init__()
         self.n_nodes = n_nodes
         self.c_node = c_node
-        self._n_node_inputs = 2 # Each node finally has two inputs.
 
         self.preprocess0 = ConvOps(c0, c_node, kernel_size=1, 
                                    stride = 2 if cell_type == 'down' else 1, 
@@ -65,24 +64,22 @@ class Cell(nn.Module):
     def out_channels(self):
         return self.n_nodes * self.c_node
 
-    def forward(self, s0, s1, weight1, weight2):
-        # weight1: the normal operations weights with sharing
-        # weight2: the down or up operations weight, respectively
-
-        # the cell output is concatenate, so need a convolution to learn best combination
-        s0 = self.preprocess0(s0)
-        s1 = self.preprocess1(s1)
-        states = [s0, s1]
-        offset = 0
-
-        for i in range(self.n_nodes):
-            # handle the un-consistent dimension
-            tmp_list = []
-            for j, h in enumerate(states):
-                tmp_list += [self._ops[offset+j](h, weight1[offset+j], weight2[offset+j])]
-            s = sum(consistent_dim(tmp_list))######################################## !!!
-            #s = sum(self._ops[offset+j](h, weight1[offset+j], weight2[offset+j]) for j, h in enumerate(states))
-            offset += len(states)        
-            states.append(s)
-
-        return torch.cat(states[-self.n_nodes:], dim=1)
+    def forward(self, input0, input1, w1, w2):
+        '''
+        input0, input1: inputs of cell
+        w1: weights for MixedOp with stride == 1
+        w2: weights for MixedOp with stride == 2
+        '''
+        input0 = self.preprocess0(input0)
+        input1 = self.preprocess1(input1)
+        inputs = [input0, input1]
+        i_w = 0
+        for node in range(self.n_nodes):
+            outputs = []
+            for i, input_i in enumerate(inputs):
+                i_w += i
+                outputs.append(self._ops[i_w](input_i, w1[i_w], w2[i_w]))
+            inputs.append(sum(consistent_dim(outputs)))
+        return torch.cat(inputs[-self.n_nodes:], dim=1)
+            
+       

@@ -36,6 +36,12 @@ class KernelNet(nn.Module):
                                  dropout_rate=0.1, ops_order='weight')
 
     def forward(self, x, w1_down, w1_up, w2_down, w2_up):
+        '''
+        w1_down: weights for downward MixedOp with stride == 1
+        w1_up:   weights for upward MixedOp with stride == 1
+        w2_down: weights for downward MixedOp with stride == 2
+        w2_up:   weights for upward MixedOp with stride == 2
+        '''
         s0, s1 = self.stem0(x), self.stem1(x)
         down_outputs = [s0, s1]
         for i, cell in enumerate(self.down_cells):
