@@ -10,6 +10,7 @@ import generator
 from loss import WeightedDiceLoss
 from helper import calc_param_size
 from nas import NasShell
+import sys
 
 class Searching():
     '''
@@ -18,7 +19,6 @@ class Searching():
     def __init__(self, jupyter = True):
         self.jupyter = jupyter
         self._init_configure()
-        self._init_logger()
         self._init_device()
         self._init_dataset()
         self._init_model()
@@ -39,21 +39,8 @@ class Searching():
         
         return
     
-    def _init_logger(self):
-        log_dir = self.config['search']['log_dir']
-        self.logger = logging.getLogger('Searching')
-        formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        self.logger.addHandler(console_handler)
-        if self.config['search']['save_log']:
-            file_handler = logging.FileHandler(
-                os.path.join(log_dir,'log_{}.txt'.format(time.strftime('%Y%m%d%H%M%S'))))
-            file_handler.setFormatter(formatter)
-            self.logger.addHandler(file_handler)
-        
-        self.writer = SummaryWriter(os.path.join(log_dir, 'tensorboardX_log'))
-        return
+#     def _init_logger(self):
+#         self.writer = SummaryWriter(os.path.join(log_dir, 'tensorboardX_log'))
         
     def _init_device(self):
         if self.config['search']['gpu'] and torch.cuda.is_available() :
@@ -80,12 +67,16 @@ class Searching():
                               out_channels=len(self.config['data']['labels']), 
                               depth=self.config['search']['depth'], 
                               n_nodes=self.config['search']['n_nodes'],
-                              device=self.device,
                               normal_w_share=self.config['search']['normal_w_share'], 
                               channel_change=self.config['search']['channel_change']).to(self.device)
+        print('Param size = %.3f MB', calc_param_size(self.model))
         
-        self.logger.info('param size = %.3f MB', calc_param_size(self.model))
+        pdb.set_trace()
+        x = torch.randn(1, 4, 64, 64, 64)
+        x = torch.as_tensor(x, device=torch.device('cuda'))
         
+        y = self.model(x)
+        pdb.set_trace()
     def search(self):
         pass
     
@@ -95,13 +86,7 @@ class Searching():
     def infer(self):
         pass
     
-    def _log_clear(self):
-        '''
-        This is going to be put in the end of this class.
-        '''
-        while self.logger.handlers:
-            self.logger.handlers.pop()
-        return
+
     
 
 

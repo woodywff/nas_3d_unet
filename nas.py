@@ -1,7 +1,9 @@
+import torch
 import torch.nn as nn
 from prim_ops import ConvOps, DownOps, UpOps, NormOps
 from cell import Cell
 from torch.functional import F
+import pdb
 
 class KernelNet(nn.Module):
     def __init__(self, in_channels, init_n_kernels, out_channels, depth, n_nodes, channel_change):
@@ -42,6 +44,7 @@ class KernelNet(nn.Module):
         w2_down: weights for downward MixedOp with stride == 2
         w2_up:   weights for upward MixedOp with stride == 2
         '''
+        pdb.set_trace()
         s0, s1 = self.stem0(x), self.stem1(x)
         down_outputs = [s0, s1]
         for i, cell in enumerate(self.down_cells):
@@ -56,7 +59,7 @@ class KernelNet(nn.Module):
     
 class NasShell(nn.Module):
     def __init__(self, in_channels, init_n_kernels, out_channels, depth, n_nodes,
-                 device, normal_w_share=False, channel_change=False):
+                 normal_w_share=False, channel_change=False):
         '''
         This class defines the architectural params. I take it as the case/packing/box/shell of NAS. 
         in_channels: how many kinds of MRI modalities being used.
@@ -70,11 +73,9 @@ class NasShell(nn.Module):
         super().__init__()
         self.normal_w_share = normal_w_share
         self.n_nodes = n_nodes
-#         self.device = device
 
         self.net = KernelNet(in_channels, init_n_kernels, out_channels, 
                              depth, n_nodes, channel_change)
-
         # Initialize architecture parameters: alpha
         self._init_alphas()
         
@@ -89,13 +90,8 @@ class NasShell(nn.Module):
         self.alphas_normal_down = nn.Parameter(torch.zeros((n_ops, len(NormOps))))
         self.alphas_normal_up =  self.alphas_normal_down if self.normal_w_share else nn.Parameter(
                                     torch.zeros((n_ops, len(NormOps))))
-
-
         # setup alphas list
-        self._alphas = []
-        for name, param in self.named_parameters():
-            if 'alphas' in name: 
-                self._alphas.append((name, param))
+        self._alphas = [(name, param) for name, param in self.named_parameters() if 'alpha' in name]
         
 #         self._arch_parameters = [
 #             self.alphas_normal_down,

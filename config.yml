@@ -21,7 +21,7 @@ data:
   - 1
   - 2
   - 4
-  patch_shape: 128
+  patch_shape: 64
   patch_overlap: null
   batch_size_train: 1
   batch_size_val: 2

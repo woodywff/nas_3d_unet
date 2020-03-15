@@ -1,5 +1,6 @@
 import torch.nn as nn
 import pdb
+from math import ceil
 
 OPS = {
 'identity':      lambda c, stride: IdentityOp(c, c),
@@ -92,7 +93,7 @@ class ConvOps(BaseOp):
         super().__init__(in_channels, out_channels, dropout_rate, ops_order)
         
         self.depthwised = depthwised
-        padding = (dilation * (kernel_size - 1) - stride + 1) // 2
+        padding = max(0, ceil((dilation * (kernel_size - 1) - stride + 1)/2))
 
         if transposed:
             if depthwised: # Ref: https://arxiv.org/abs/1704.04861
@@ -130,7 +131,7 @@ class SEConvOp(BaseOp):
         super().__init__(in_channels, out_channels, dropout_rate, ops_order)
         
         self.stride = stride
-        padding = (dilation * (kernel_size - 1) - stride + 1) // 2
+        padding = max(0, ceil((dilation * (kernel_size - 1) - stride + 1)/2))
 
         self.avg_pool = nn.AdaptiveAvgPool3d(1)
         self.fc = nn.Sequential(
