@@ -30,7 +30,6 @@ data:
   augment_distortion_factor: 0.25
   permute: true
   skip_health: true
-  epochs: 2
   spe_file: data/spe.pkl # steps per epoch 
 search:
   log_dir: log
@@ -42,4 +41,5 @@ search:
   n_nodes: 3
   normal_w_share: false
   channel_change: false
+  epochs: 2
 

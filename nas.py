@@ -5,8 +5,21 @@ from cell import Cell
 from torch.functional import F
 import pdb
 
+
+
+FLAG_DEBUG = True
+
 class KernelNet(nn.Module):
     def __init__(self, in_channels, init_n_kernels, out_channels, depth, n_nodes, channel_change):
+        '''
+        This class defines the U-shaped architecture. I take it as the kernel of NAS. 
+        in_channels: How many kinds of MRI modalities being used.
+        init_n_kernels: Number of kernels for the nodes in the first cell.
+        out_channels: How many kinds of tumor labels.
+        depth: Number of downward cells. For upward, it has depth+1 cells.
+        n_nodes: Number of nodes in each cell.
+        channel_change: If True, channel size expands and shrinks in double during downward and upward forwarding.  
+        '''
         super().__init__()
         c0 = c1 = n_nodes * init_n_kernels # channel0, channel1, the number of kernels.
         c_node = init_n_kernels # channel dim doesn't change for different nodes
@@ -33,7 +46,6 @@ class KernelNet(nn.Module):
             self.up_cells += [up_cell]
             c1 = up_cell.out_channels
             c_node = c_node // 2 if channel_change else c_node  # halve the number of filters
-
         self.last_conv = ConvOps(c1, out_channels, kernel_size=1, 
                                  dropout_rate=0.1, ops_order='weight')
 
@@ -44,39 +56,42 @@ class KernelNet(nn.Module):
         w2_down: weights for downward MixedOp with stride == 2
         w2_up:   weights for upward MixedOp with stride == 2
         '''
-        pdb.set_trace()
         s0, s1 = self.stem0(x), self.stem1(x)
         down_outputs = [s0, s1]
         for i, cell in enumerate(self.down_cells):
             s0, s1 = s1, cell(s0, s1, w1_down, w2_down)
             down_outputs.append(s1)
+        if FLAG_DEBUG:
+            for i in down_outputs: 
+                print(i.shape)
         down_outputs.pop()
         for i, cell in enumerate(self.up_cells):
             s0 = down_outputs.pop()
             s1 = cell(s0, s1, w1_up, w2_up)
+            if FLAG_DEBUG:
+                print(s1.shape) 
         return self.last_conv(s1)
     
     
-class NasShell(nn.Module):
+class ShellNet(nn.Module):
     def __init__(self, in_channels, init_n_kernels, out_channels, depth, n_nodes,
                  normal_w_share=False, channel_change=False):
         '''
         This class defines the architectural params. I take it as the case/packing/box/shell of NAS. 
-        in_channels: how many kinds of MRI modalities being used.
-        init_n_kernels: number of kernels for the nodes in the first cell.
-        out_channels: how many kinds of tumor labels.
-        depth: number of downward cells. For upward, is depth+1
-        n_nodes: number of nodes in each cell.
-        normal_w_share: if True, self.alphas_normal_up = self.alphas_normal_down
-        channel_change: if True, channel size expands and shrinks in double during downward and upward forwarding.  
+        in_channels: How many kinds of MRI modalities being used.
+        init_n_kernels: Number of kernels for the nodes in the first cell.
+        out_channels: How many kinds of tumor labels.
+        depth: Number of downward cells. For upward, it has depth+1 cells.
+        n_nodes: Number of nodes in each cell.
+        normal_w_share: If True, self.alphas_normal_up = self.alphas_normal_down
+        channel_change: If True, channel size expands and shrinks in double during downward and upward forwarding.  
         '''
         super().__init__()
         self.normal_w_share = normal_w_share
         self.n_nodes = n_nodes
 
-        self.net = KernelNet(in_channels, init_n_kernels, out_channels, 
+        self.kernel = KernelNet(in_channels, init_n_kernels, out_channels, 
                              depth, n_nodes, channel_change)
-        # Initialize architecture parameters: alpha
         self._init_alphas()
         
     def _init_alphas(self):
@@ -109,4 +124,38 @@ class NasShell(nn.Module):
         w1_up = F.softmax(self.alphas_normal_up, dim=-1)
         w2_down = F.softmax(self.alphas_down, dim=-1)
         w2_up = F.softmax(self.alphas_up, dim=-1)
-        return self.net(x, w1_down, w1_up, w2_down, w2_up)
+        return self.kernel(x, w1_down, w1_up, w2_down, w2_up)
+    
+    
+class ShellConsole:
+    def __init__(self, shell_net, optim_shell, loss):
+        '''
+        This is where we define the step() method for ShellNet().alphas() update.
+        shell_net: ShellNet() instance 
+        optim_shell: Optimizer for shell_net
+        loss: Loss function of shell_net
+        '''
+        self.shell_net = shell_net
+        self.optimizer = optim_shell
+        self.loss = loss
+
+    def step(self, x, y_truth):
+        '''
+        Do one step of gradient descent for shell_net alphas.
+        x: Input batch; shape: (batch_size, n_modalities, patch_size[0], patch_size[1], patch_size[2])
+        y_truth: Label batch; shape: ((batch_size, n_labels, patch_size[0], patch_size[1], patch_size[2]))
+        '''
+#         pdb.set_trace()
+#         from copy import deepcopy
+#         t0 = deepcopy(self.shell_net.alphas_dict())
+
+        self.optimizer.zero_grad()
+        y_pred = self.shell_net(x)
+        loss = self.loss(y_pred, y_truth)
+        loss.backward()
+        self.optimizer.step()
+        
+#         pdb.set_trace()
+#         t1 = deepcopy(self.shell_net.alphas_dict())
+#         for key in t1.keys():
+#             print(t1[key] - t0[key])

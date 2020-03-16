@@ -109,7 +109,7 @@ class Generator():
         else:
             self.steps_per_epoch = spes[spe_name]
     
-    def _get_num_patches(self):
+    def _get_n_patches(self):
         id_index_patch_list = self.id_index_patch_list.copy()
         count = 0
         for id_index_patch in tqdm(id_index_patch_list, desc = 'Calculating the number of patches'):
@@ -121,7 +121,7 @@ class Generator():
         return count
     
     def get_steps_per_epoch(self):
-        return int(np.ceil(self._get_num_patches()/self.batch_size))
+        return int(np.ceil(self._get_n_patches()/self.batch_size))
         
     def epoch(self):
         '''

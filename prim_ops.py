@@ -46,12 +46,10 @@ NormOps = [
 
 
 class BaseOp(nn.Module):
-
     def __init__(self, in_channels, out_channels, 
                  dropout_rate=0, ops_order='weight_norm_act' ):
         super().__init__()
         self.ops_list = ops_order.split('_')
-        
         # We use nn.GroupNorm cause our batch_size is too small.
         # Ref: https://arxiv.org/abs/1803.08494
         # 16 channels for one group is best
@@ -84,25 +82,24 @@ class BaseOp(nn.Module):
                 raise Warning('Unrecognized op: %s' % op)
         return x
 
-
 class ConvOps(BaseOp):
     def __init__(self, in_channels, out_channels, kernel_size=3, 
                  stride=1, dilation=1, transposed=False, depthwised=False,
                  dropout_rate=0, ops_order='weight_norm_act'):
-        
         super().__init__(in_channels, out_channels, dropout_rate, ops_order)
-        
         self.depthwised = depthwised
         padding = max(0, ceil((dilation * (kernel_size - 1) - stride + 1)/2))
 
         if transposed:
             if depthwised: # Ref: https://arxiv.org/abs/1704.04861
                 self.depth_conv = nn.ConvTranspose3d(in_channels, in_channels, kernel_size,
-                                                     stride=stride, padding=padding, groups=in_channels)
+                                                     stride=stride, padding=padding, groups=in_channels,
+                                                     output_padding = 0 if stride == 1 else 1)
                 self.point_conv = nn.Conv3d(in_channels, out_channels, kernel_size=1)
             else: 
                 self.conv = nn.ConvTranspose3d(in_channels, out_channels, kernel_size,
-                                               stride=stride, padding=padding, dilation=dilation)
+                                               stride=stride, padding=padding, dilation=dilation,
+                                               output_padding = 0 if stride == 1 else 1)
         else:
             if depthwised: 
                 self.depth_conv = nn.Conv3d(in_channels, in_channels, kernel_size,
@@ -111,7 +108,6 @@ class ConvOps(BaseOp):
             else: 
                 self.conv = nn.Conv3d(in_channels, out_channels, kernel_size,
                                       stride=stride, padding=padding, dilation=dilation)
-
     def weight_call(self, x):
         if self.depthwised:
             x = self.depth_conv(x)
@@ -128,7 +124,7 @@ class SEConvOp(BaseOp):
     def __init__(self, in_channels, out_channels, kernel_size=3, 
                  stride=1, dilation=1, transposed=False,
                  dropout_rate=0, ops_order='weight_norm'):
-        super().__init__(in_channels, out_channels, dropout_rate, ops_order)
+        super().__init__(in_channels, out_channels, dropout_rate, ops_order if stride >= 2 else 'weight')
         
         self.stride = stride
         padding = max(0, ceil((dilation * (kernel_size - 1) - stride + 1)/2))
@@ -140,24 +136,20 @@ class SEConvOp(BaseOp):
             nn.Linear(1, out_channels),
             nn.Sigmoid()
         )
-        
         if stride >= 2:
             if transposed:
                 self.conv = nn.ConvTranspose3d(in_channels, out_channels, kernel_size,
-                                               stride=stride, padding=padding)
+                                               stride=stride, padding=padding,
+                                               output_padding = 0 if stride == 1 else 1)
             else:
                 self.conv = nn.Conv3d(in_channels, out_channels, kernel_size,
                                       stride=stride, padding=padding)
-        else:
-            self.norm = None
-
     def weight_call(self, x):
         batch_size, channels = x.size()[:2]
         y = self.avg_pool(x).view(batch_size, channels)
         y = self.fc(y).view(batch_size, channels, 1, 1, 1)
         res = self.conv(x*y) if self.stride >= 2 else x*y
         return res
-
 
 class PoolingOp(BaseOp):
     def __init__(self, in_channels, out_channels, pool_type, 
@@ -175,7 +167,6 @@ class PoolingOp(BaseOp):
         return self.pool(x)
 
 class IdentityOp(BaseOp):
-
     def __init__(self, in_channels, out_channels, ops_order='weight_norm_act'):
         super().__init__(in_channels, out_channels, ops_order=ops_order)
     def weight_call(self, x):

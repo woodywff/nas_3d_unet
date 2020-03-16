@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from prim_ops import OPS, DownOps, UpOps, NormOps, ConvOps
-from helper import dim_assert
+# from helper import dim_assert
 import pdb
 
 
@@ -28,9 +28,9 @@ class MixedOp(nn.Module):
         w2: up_or_down, stride=2
         '''
         if self._op_type == 'up_or_down':
-            res = sum(dim_assert([w * op(x) for w, op in zip(w2, self._ops)]))
+            res = sum([w * op(x) for w, op in zip(w2, self._ops)]) # debug: dim_assert
         else:
-            res = sum(dim_assert([w * op(x) for w, op in zip(w1, self._ops)]))
+            res = sum([w * op(x) for w, op in zip(w1, self._ops)]) # debug: dim_assert
         return res
 
 class Cell(nn.Module):
@@ -79,7 +79,7 @@ class Cell(nn.Module):
             for input_i in inputs:
                 outputs.append(self._ops[i_w](input_i, w1[i_w], w2[i_w]))
                 i_w += 1
-            inputs.append(sum(dim_assert(outputs)))
-        return torch.cat(dim_assert(inputs[-self.n_nodes:]), dim=1)
+            inputs.append(sum(outputs)) # debug: dim_assert
+        return torch.cat(inputs[-self.n_nodes:], dim=1) # debug: dim_assert
             
        

@@ -16,8 +16,10 @@ def dim_assert(t_list):
     dims = tuple(np.max([t.size() for t in t_list], axis=0)[-3:])
     for i in range(len(t_list)):
         if tuple(t_list[i].shape[-3:]) != dims:
+            print_red('inconsistent dim: i')
             t_list[i] = interpolate(t_list[i], dims)
     return t_list
 
 
-    
+def print_red(something):
+    print("\033[1;31m{}\033[0m".format(something))

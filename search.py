@@ -9,8 +9,11 @@ import torch
 import generator
 from loss import WeightedDiceLoss
 from helper import calc_param_size
-from nas import NasShell
+from nas import ShellNet, ShellConsole
 import sys
+from torch.optim import Adam
+from adabound import AdaBound
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 class Searching():
     '''
@@ -62,7 +65,7 @@ class Searching():
         # Setup loss function
         self.loss = WeightedDiceLoss().to(self.device)
         # Setup Model
-        self.model = NasShell(in_channels=len(self.config['data']['all_mods']), 
+        self.model = ShellNet(in_channels=len(self.config['data']['all_mods']), 
                               init_n_kernels=self.config['search']['init_n_kernels'], 
                               out_channels=len(self.config['data']['labels']), 
                               depth=self.config['search']['depth'], 
@@ -70,6 +73,13 @@ class Searching():
                               normal_w_share=self.config['search']['normal_w_share'], 
                               channel_change=self.config['search']['channel_change']).to(self.device)
         print('Param size = %.3f MB', calc_param_size(self.model))
+        pdb.set_trace()
+        self.optim_shell = Adam(self.model.alphas(), lr=3e-4)
+        self.optim_kernel = AdaBound(self.model.kernel.parameters(), lr=1e-3, weight_decay=5e-4)
+        self.kernel_lr_scheduler = CosineAnnealingLR(self.optim_kernel, self.config['search']['epochs'], eta_min=1e-3)
+        
+        self.shell_console = ShellConsole(self.model, self.optim_shell, self.loss)
+        
         
         pdb.set_trace()
         x = torch.randn(1, 4, 64, 64, 64)

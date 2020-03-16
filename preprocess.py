@@ -63,12 +63,12 @@ def create_h5(source_folder, overwrite=False, config_yml='config.yml'):
             end_edge = np.max(brain_widths,axis=0)[1]
             brain_width = np.vstack((start_edge,end_edge))
             h5_subid.create_dataset('brain_width',data=brain_width)
-        num_subs = len(h5_file)
+        n_subs = len(h5_file)
         
     # update config.yml
     with open(config_yml,'w') as f:
         config['data'].update({'{:s}_h5'.format(dataset_type):target,
-                               'len_{:s}'.format(dataset_type):num_subs})
+                               'len_{:s}'.format(dataset_type):n_subs})
         yaml.dump(config,f)
         
     return target
@@ -142,20 +142,20 @@ def cal_mean_std(source_folder, overwrite=False,config_yml = 'config.yml'):
         pickle.dump(mean_std_values,f)
     return
     
-def cross_val_split(num_sbjs, saved_path, num_folds=5, overwrite=False):
+def cross_val_split(n_subs, saved_path, n_folders=5, overwrite=False):
     '''
-    To generate num_folds cross validation.
+    To generate n_folders cross validation.
     Return {'train_list_0':[],'val_list_0':[],...}
     '''
     if os.path.exists(saved_path) and not overwrite:
         print('{:s} exists already.'.format(saved_path))
         return
-    subid_indices = list(range(num_sbjs))
+    subid_indices = list(range(n_subs))
     shuffle(subid_indices)
     res = {}
-    for i in range(num_folds):
-        left = int(i/num_folds * num_sbjs)
-        right = int((i+1)/num_folds * num_sbjs)
+    for i in range(n_folders):
+        left = int(i/n_folders * n_subs)
+        right = int((i+1)/n_folders * n_subs)
         res['train_list_{:d}'.format(i)] = subid_indices[:left] + subid_indices[right:]
         res['val_list_{:d}'.format(i)] = subid_indices[left : right]
     for i in res.values():
