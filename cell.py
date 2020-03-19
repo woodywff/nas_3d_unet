@@ -12,25 +12,24 @@ class MixedOp(nn.Module):
         '''
         super().__init__()
         self._ops = nn.ModuleList()
-        if stride >= 2: # down or up edge
-            primitives = UpOps if transposed else DownOps
-            self._op_type = 'up_or_down'
-        else:
+        self.stride = stride
+        if stride == 1:
             primitives = NormOps
-            self._op_type = 'normal'
+        else:
+            primitives = UpOps if transposed else DownOps
         for pri in primitives:
             op = OPS[pri](channels, stride)
             self._ops.append(op)
 
-    def forward(self, x, w1, w2):
+    def forward(self, x, alpha1, alpha2):
         '''
-        w1: normal, stride=1
-        w2: up_or_down, stride=2
+        alpha1: Weights for MixedOps with stride=1
+        alpha2: Weights for MixedOps with stride=2
         '''
-        if self._op_type == 'up_or_down':
-            res = sum([w * op(x) for w, op in zip(w2, self._ops)]) # debug: dim_assert
+        if self.stride == 1:
+            res = sum([w * op(x) for w, op in zip(alpha1, self._ops)]) # debug: dim_assert
         else:
-            res = sum([w * op(x) for w, op in zip(w1, self._ops)]) # debug: dim_assert
+            res = sum([w * op(x) for w, op in zip(alpha2, self._ops)]) # debug: dim_assert
         return res
 
 class Cell(nn.Module):
@@ -39,7 +38,7 @@ class Cell(nn.Module):
         n_nodes: How many nodes in a cell.
         c0, c1: in_channels for two inputs.
         c_node: out_channels for each node.
-        cell_type: 'up' or 'down'
+        cell_type: 'up' or 'down' means upward or downward.
         '''
         super().__init__()
         self.n_nodes = n_nodes
@@ -64,22 +63,22 @@ class Cell(nn.Module):
     def out_channels(self):
         return self.n_nodes * self.c_node
 
-    def forward(self, input0, input1, w1, w2):
+    def forward(self, x0, x1, alpha1, alpha2):
         '''
-        input0, input1: inputs of cell
-        w1: weights for MixedOp with stride == 1
-        w2: weights for MixedOp with stride == 2
+        x0, x1: Inputs of cell
+        alpha1: Weights for MixedOp with stride == 1
+        alpha2: Weights for MixedOp with stride == 2
         '''
-        input0 = self.preprocess0(input0)
-        input1 = self.preprocess1(input1)
-        inputs = [input0, input1]
-        i_w = 0
+        x0 = self.preprocess0(x0)
+        x1 = self.preprocess1(x1)
+        xs = [x0, x1]
+        i = 0
         for node in range(self.n_nodes):
             outputs = []
-            for input_i in inputs:
-                outputs.append(self._ops[i_w](input_i, w1[i_w], w2[i_w]))
-                i_w += 1
-            inputs.append(sum(outputs)) # debug: dim_assert
-        return torch.cat(inputs[-self.n_nodes:], dim=1) # debug: dim_assert
+            for x in xs:
+                outputs.append(self._ops[i](x, alpha1[i], alpha2[i]))
+                i += 1
+            xs.append(sum(outputs)) # debug: dim_assert
+        return torch.cat(xs[-self.n_nodes:], dim=1) # debug: dim_assert
             
        

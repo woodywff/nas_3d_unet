@@ -49,25 +49,28 @@ class KernelNet(nn.Module):
         self.last_conv = ConvOps(c1, out_channels, kernel_size=1, 
                                  dropout_rate=0.1, ops_order='weight')
 
-    def forward(self, x, w1_down, w1_up, w2_down, w2_up):
+    def forward(self, x, alpha1_down, alpha1_up, alpha2_down, alpha2_up):
         '''
-        w1_down: weights for downward MixedOp with stride == 1
-        w1_up:   weights for upward MixedOp with stride == 1
-        w2_down: weights for downward MixedOp with stride == 2
-        w2_up:   weights for upward MixedOp with stride == 2
+        alpha1_down: Weights for downward MixedOps with stride == 1
+        alpha1_up:   Weights for upward MixedOps with stride == 1
+        alpha2_down: Weights for downward MixedOps with stride == 2
+        alpha2_up:   Weights for upward MixedOps with stride == 2
+        Note these alphas are different from the original alphas in ShellNet,
+        they are the F.softmax(original alphas).
         '''
         s0, s1 = self.stem0(x), self.stem1(x)
         down_outputs = [s0, s1]
         for i, cell in enumerate(self.down_cells):
-            s0, s1 = s1, cell(s0, s1, w1_down, w2_down)
+            s0, s1 = s1, cell(s0, s1, alpha1_down, alpha2_down)
             down_outputs.append(s1)
         if FLAG_DEBUG:
+            print('x.shape = ',x.shape)
             for i in down_outputs: 
                 print(i.shape)
         down_outputs.pop()
         for i, cell in enumerate(self.up_cells):
             s0 = down_outputs.pop()
-            s1 = cell(s0, s1, w1_up, w2_up)
+            s1 = cell(s0, s1, alpha1_up, alpha2_up)
             if FLAG_DEBUG:
                 print(s1.shape) 
         return self.last_conv(s1)
@@ -83,7 +86,7 @@ class ShellNet(nn.Module):
         out_channels: How many kinds of tumor labels.
         depth: Number of downward cells. For upward, it has depth+1 cells.
         n_nodes: Number of nodes in each cell.
-        normal_w_share: If True, self.alphas_normal_up = self.alphas_normal_down
+        normal_w_share: If True, self.alpha1_up = self.alpha1_down
         channel_change: If True, channel size expands and shrinks in double during downward and upward forwarding.  
         '''
         super().__init__()
@@ -96,23 +99,24 @@ class ShellNet(nn.Module):
         
     def _init_alphas(self):
         '''
-        alphas_down, alphas_up: params for MixedOp with stride=2
-        alphas_normal_down, alphas_normal_up: params for MixedOp with stride=1
+        alpha2_down, alpha2_up: Weights for MixedOps with stride=2
+        alpha1_down, alpha1_up: Weights for MixedOps with stride=1
+        The 'down' and 'up' indicate the MixedOp is in the downward or upward blocks(cells).
         '''
         n_ops = sum(range(2, 2 + self.n_nodes))
-        self.alphas_down  = nn.Parameter(torch.zeros((n_ops, len(DownOps))))
-        self.alphas_up = nn.Parameter(torch.zeros((n_ops, len(UpOps))))
-        self.alphas_normal_down = nn.Parameter(torch.zeros((n_ops, len(NormOps))))
-        self.alphas_normal_up =  self.alphas_normal_down if self.normal_w_share else nn.Parameter(
+        self.alpha2_down  = nn.Parameter(torch.zeros((n_ops, len(DownOps))))
+        self.alpha2_up = nn.Parameter(torch.zeros((n_ops, len(UpOps))))
+        self.alpha1_down = nn.Parameter(torch.zeros((n_ops, len(NormOps))))
+        self.alpha1_up =  self.alpha1_down if self.normal_w_share else nn.Parameter(
                                     torch.zeros((n_ops, len(NormOps))))
         # setup alphas list
         self._alphas = [(name, param) for name, param in self.named_parameters() if 'alpha' in name]
         
 #         self._arch_parameters = [
-#             self.alphas_normal_down,
-#             self.alphas_down,
-#             self.alphas_normal_up,
-#             self.alphas_up
+#             self.alpha1_down,
+#             self.alpha2_down,
+#             self.alpha1_up,
+#             self.alpha2_up
 #         ]
         
     def alphas(self):
@@ -120,11 +124,26 @@ class ShellNet(nn.Module):
             yield param
 
     def forward(self, x):
-        w1_down = F.softmax(self.alphas_normal_down, dim=-1)
-        w1_up = F.softmax(self.alphas_normal_up, dim=-1)
-        w2_down = F.softmax(self.alphas_down, dim=-1)
-        w2_up = F.softmax(self.alphas_up, dim=-1)
-        return self.kernel(x, w1_down, w1_up, w2_down, w2_up)
+        return self.kernel(x, 
+                           F.softmax(self.alpha1_down, dim=-1), 
+                           F.softmax(self.alpha1_up, dim=-1), 
+                           F.softmax(self.alpha2_down, dim=-1), 
+                           F.softmax(self.alpha2_up, dim=-1))
+    
+    def genotype(self):
+        geno_parser = GenoParser(self.n_nodes)
+        gene_down = geno_parser.parse(F.softmax(self.alpha1_down, dim=-1).detach().cpu().numpy(),
+                           F.softmax(self.alpha2_down, dim=-1).detach().cpu().numpy(), cell_type='down')
+        gene_up = geno_parser.parse(F.softmax(self.alpha1_up, dim=-1).detach().cpu().numpy(),
+                         F.softmax(self.alpha2_up, dim=-1).detach().cpu().numpy(), cell_type='up')
+
+        concat = range(2, self.n_nodes+2)
+        geno_type = Genotype(
+            down=gene_down, down_concat = concat,
+            up=gene_up, up_concat=concat
+        )
+        return geno_type
+    
     
     
 class ShellConsole:

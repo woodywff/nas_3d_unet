@@ -127,7 +127,7 @@ class Generator():
         '''
         A generator for one epoch.
         If self.patch_overlap is set, for each epoch the paching results may be different, 
-        so we need to self.epoch_init() each time.
+        so we need to do self.epoch_init() at the end of each epoch.
         '''
         x_list = []
         y_list = []

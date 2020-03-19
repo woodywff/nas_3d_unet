@@ -36,10 +36,10 @@ search:
   save_log: false
   gpu: true
   multi_gpus: false
-  init_n_kernels: 8
+  init_n_kernels: 4
   depth: 4
   n_nodes: 3
   normal_w_share: false
-  channel_change: false
+  channel_change: true
   epochs: 2
 

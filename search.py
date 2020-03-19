@@ -2,13 +2,12 @@ import pdb
 import argparse
 import yaml
 from tensorboardX import SummaryWriter
-import logging
 import os
 import time
 import torch
 import generator
 from loss import WeightedDiceLoss
-from helper import calc_param_size
+from helper import calc_param_size, print_red
 from nas import ShellNet, ShellConsole
 import sys
 from torch.optim import Adam
@@ -51,7 +50,7 @@ class Searching():
             torch.backends.cudnn.enabled = True
             torch.backends.cudnn.benchmark = True
         else:
-            self.logger.warning('No gpu devices available!, we will use cpu')
+            print_red('No gpu devices available!, we will use cpu')
             self.device = torch.device('cpu')
         return
     
@@ -73,7 +72,7 @@ class Searching():
                               normal_w_share=self.config['search']['normal_w_share'], 
                               channel_change=self.config['search']['channel_change']).to(self.device)
         print('Param size = %.3f MB', calc_param_size(self.model))
-        pdb.set_trace()
+
         self.optim_shell = Adam(self.model.alphas(), lr=3e-4)
         self.optim_kernel = AdaBound(self.model.kernel.parameters(), lr=1e-3, weight_decay=5e-4)
         self.kernel_lr_scheduler = CosineAnnealingLR(self.optim_kernel, self.config['search']['epochs'], eta_min=1e-3)
@@ -81,30 +80,40 @@ class Searching():
         self.shell_console = ShellConsole(self.model, self.optim_shell, self.loss)
         
         
-        pdb.set_trace()
+#         pdb.set_trace()
         x = torch.randn(1, 4, 64, 64, 64)
         x = torch.as_tensor(x, device=torch.device('cuda'))
         
         y = self.model(x)
-        pdb.set_trace()
+#         pdb.set_trace()
     def search(self):
-        pass
+        print('Searching starts:')
+        start_time = time.time()
+        for epoch in range(self.config['search']['epochs']):
+            self.epoch = epoch
+            
+            # genotype:
+            
+            # self.train()
+            
+            # self.validate()
+            
+            # criteria logs
+            
+            # print logs
+            
+            
+            
+            self.kernel_lr_scheduler.step()
     
     def train(self):
         pass
     
-    def infer(self):
+    def validate(self):
         pass
     
 
     
-
-
-def test():
-    for i in tqdm(range(10)):
-        print(i)
-    
 if __name__ == '__main__':
     search_network = Searching(jupyter = False)
-#     test()
 #     search_network.run()
