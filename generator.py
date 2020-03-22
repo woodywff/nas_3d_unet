@@ -82,6 +82,7 @@ class Generator():
     
     def epoch_init(self):
         '''
+        spe is short for steps per epoch.
         The self.steps_per_epoch is needed by the tqdm outside the Generator class.
         So we need to calc it before each invoking of self.epoch().
         self.spe_file saves a dict, for each key named as spe_name we hold the corresponding spe value.

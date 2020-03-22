@@ -124,7 +124,8 @@ class SEConvOp(BaseOp):
     def __init__(self, in_channels, out_channels, kernel_size=3, 
                  stride=1, dilation=1, transposed=False,
                  dropout_rate=0, ops_order='weight_norm'):
-        super().__init__(in_channels, out_channels, dropout_rate, ops_order if stride >= 2 else 'weight')
+        super().__init__(in_channels, out_channels, dropout_rate, 
+                         ops_order = ops_order if stride > 1 else 'weight')
         
         self.stride = stride
         padding = max(0, ceil((dilation * (kernel_size - 1) - stride + 1)/2))
@@ -136,7 +137,7 @@ class SEConvOp(BaseOp):
             nn.Linear(1, out_channels),
             nn.Sigmoid()
         )
-        if stride >= 2:
+        if stride > 1:
             if transposed:
                 self.conv = nn.ConvTranspose3d(in_channels, out_channels, kernel_size,
                                                stride=stride, padding=padding,

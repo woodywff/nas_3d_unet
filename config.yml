@@ -24,7 +24,7 @@ data:
   patch_shape: 64
   patch_overlap: null
   batch_size_train: 1
-  batch_size_val: 2
+  batch_size_val: 1
   augment: true
   augment_flip: true
   augment_distortion_factor: 0.25
@@ -42,4 +42,5 @@ search:
   normal_w_share: false
   channel_change: true
   epochs: 2
-
+  best_geno_count: 40
+  grad_clip: 5

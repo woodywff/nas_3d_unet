@@ -4,10 +4,11 @@ from prim_ops import ConvOps, DownOps, UpOps, NormOps
 from cell import Cell
 from torch.functional import F
 import pdb
+from genotype import Genotype, GenoParser
 
 
 
-FLAG_DEBUG = True
+FLAG_DEBUG = False
 
 class KernelNet(nn.Module):
     def __init__(self, in_channels, init_n_kernels, out_channels, depth, n_nodes, channel_change):
@@ -35,19 +36,20 @@ class KernelNet(nn.Module):
         down_channels = [c0, c1]
         for i in range(depth):
             c_node = 2 * c_node if channel_change else c_node  # double the number of filters
-            down_cell = Cell(n_nodes, c0, c1, c_node, cell_type='down')
+            down_cell = Cell(n_nodes, c0, c1, c_node)
             self.down_cells += [down_cell]
             c0, c1 = c1, down_cell.out_channels
             down_channels.append(c1)
         down_channels.pop()
         for i in range(depth+1):
             c0 = down_channels.pop()
-            up_cell = Cell(n_nodes, c0, c1, c_node, cell_type='up')
+            up_cell = Cell(n_nodes, c0, c1, c_node, downward = False)
             self.up_cells += [up_cell]
             c1 = up_cell.out_channels
             c_node = c_node // 2 if channel_change else c_node  # halve the number of filters
-        self.last_conv = ConvOps(c1, out_channels, kernel_size=1, 
-                                 dropout_rate=0.1, ops_order='weight')
+        self.last_conv = nn.Sequential(ConvOps(c1, out_channels, kernel_size=1, 
+                                               dropout_rate=0.1, ops_order='weight'),
+                                       nn.Sigmoid())
 
     def forward(self, x, alpha1_down, alpha1_up, alpha2_down, alpha2_up):
         '''
@@ -72,7 +74,7 @@ class KernelNet(nn.Module):
             s0 = down_outputs.pop()
             s1 = cell(s0, s1, alpha1_up, alpha2_up)
             if FLAG_DEBUG:
-                print(s1.shape) 
+                print(s1.shape)
         return self.last_conv(s1)
     
     
@@ -133,48 +135,47 @@ class ShellNet(nn.Module):
     def genotype(self):
         geno_parser = GenoParser(self.n_nodes)
         gene_down = geno_parser.parse(F.softmax(self.alpha1_down, dim=-1).detach().cpu().numpy(),
-                           F.softmax(self.alpha2_down, dim=-1).detach().cpu().numpy(), cell_type='down')
+                           F.softmax(self.alpha2_down, dim=-1).detach().cpu().numpy())
         gene_up = geno_parser.parse(F.softmax(self.alpha1_up, dim=-1).detach().cpu().numpy(),
-                         F.softmax(self.alpha2_up, dim=-1).detach().cpu().numpy(), cell_type='up')
+                         F.softmax(self.alpha2_up, dim=-1).detach().cpu().numpy(), downward=False)
 
         concat = range(2, self.n_nodes+2)
-        geno_type = Genotype(
-            down=gene_down, down_concat = concat,
-            up=gene_up, up_concat=concat
-        )
+        geno_type = Genotype(down=gene_down, 
+                             down_concat = concat,
+                             up=gene_up, 
+                             up_concat=concat)
         return geno_type
     
     
     
-class ShellConsole:
-    def __init__(self, shell_net, optim_shell, loss):
-        '''
-        This is where we define the step() method for ShellNet().alphas() update.
-        shell_net: ShellNet() instance 
-        optim_shell: Optimizer for shell_net
-        loss: Loss function of shell_net
-        '''
-        self.shell_net = shell_net
-        self.optimizer = optim_shell
-        self.loss = loss
+# class ShellConsole:
+#     def __init__(self, shell_net, optim_shell, loss):
+#         '''
+#         This is where we define the step() method for ShellNet().alphas() update.
+#         shell_net: ShellNet() instance 
+#         optim_shell: Optimizer for shell_net
+#         loss: Loss function of shell_net
+#         '''
+#         self.shell_net = shell_net
+#         self.optimizer = optim_shell
+#         self.loss = loss
 
-    def step(self, x, y_truth):
-        '''
-        Do one step of gradient descent for shell_net alphas.
-        x: Input batch; shape: (batch_size, n_modalities, patch_size[0], patch_size[1], patch_size[2])
-        y_truth: Label batch; shape: ((batch_size, n_labels, patch_size[0], patch_size[1], patch_size[2]))
-        '''
+#     def step(self, x, y_truth):
+#         '''
+#         Do one step of gradient descent for shell_net alphas.
+#         x: Input batch; shape: (batch_size, n_modalities, patch_size[0], patch_size[1], patch_size[2])
+#         y_truth: Label batch; shape: ((batch_size, n_labels, patch_size[0], patch_size[1], patch_size[2]))
+#         '''
 #         pdb.set_trace()
 #         from copy import deepcopy
-#         t0 = deepcopy(self.shell_net.alphas_dict())
+#         t0 = deepcopy(self.shell_net._alphas)
 
-        self.optimizer.zero_grad()
-        y_pred = self.shell_net(x)
-        loss = self.loss(y_pred, y_truth)
-        loss.backward()
-        self.optimizer.step()
+#         self.optimizer.zero_grad()
+#         y_pred = self.shell_net(x)
+#         loss = self.loss(y_pred, y_truth)
+#         loss.backward()
+#         self.optimizer.step()
         
 #         pdb.set_trace()
-#         t1 = deepcopy(self.shell_net.alphas_dict())
-#         for key in t1.keys():
-#             print(t1[key] - t0[key])
+#         t1 = deepcopy(self.shell_net._alphas)
+        
