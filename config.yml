@@ -41,6 +41,7 @@ search:
   n_nodes: 3
   normal_w_share: false
   channel_change: true
-  epochs: 2
+  epochs: 200
   best_geno_count: 40
   grad_clip: 5
+  last_save: log/last_search.pt

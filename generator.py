@@ -5,7 +5,6 @@ import h5py
 from patches import create_id_index_patch_list, get_patch_from_3d_data
 from augment import do_augment, random_permutation_x_y
 import pickle
-# from tqdm.notebook import tqdm
 from tqdm import tqdm
 import os
 import pdb
@@ -51,7 +50,7 @@ class Dataset():
                          patch_shape = self.data_config['patch_shape'], 
                          batch_size= self.data_config['batch_size_val'],
                          labels = self.data_config['labels'], 
-                         shuffle_index_list = False,
+#                          shuffle_index_list = False,
                          spe_file = self.data_config['spe_file'])
 
 class Generator():

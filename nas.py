@@ -114,13 +114,6 @@ class ShellNet(nn.Module):
         # setup alphas list
         self._alphas = [(name, param) for name, param in self.named_parameters() if 'alpha' in name]
         
-#         self._arch_parameters = [
-#             self.alpha1_down,
-#             self.alpha2_down,
-#             self.alpha1_up,
-#             self.alpha2_up
-#         ]
-        
     def alphas(self):
         for _, param in self._alphas:
             yield param
@@ -140,42 +133,10 @@ class ShellNet(nn.Module):
                          F.softmax(self.alpha2_up, dim=-1).detach().cpu().numpy(), downward=False)
 
         concat = range(2, self.n_nodes+2)
-        geno_type = Genotype(down=gene_down, 
-                             down_concat = concat,
-                             up=gene_up, 
-                             up_concat=concat)
-        return geno_type
+        return Genotype(down=gene_down, 
+                        down_concat=concat,
+                        up=gene_up, 
+                        up_concat=concat)
     
-    
-    
-# class ShellConsole:
-#     def __init__(self, shell_net, optim_shell, loss):
-#         '''
-#         This is where we define the step() method for ShellNet().alphas() update.
-#         shell_net: ShellNet() instance 
-#         optim_shell: Optimizer for shell_net
-#         loss: Loss function of shell_net
-#         '''
-#         self.shell_net = shell_net
-#         self.optimizer = optim_shell
-#         self.loss = loss
 
-#     def step(self, x, y_truth):
-#         '''
-#         Do one step of gradient descent for shell_net alphas.
-#         x: Input batch; shape: (batch_size, n_modalities, patch_size[0], patch_size[1], patch_size[2])
-#         y_truth: Label batch; shape: ((batch_size, n_labels, patch_size[0], patch_size[1], patch_size[2]))
-#         '''
-#         pdb.set_trace()
-#         from copy import deepcopy
-#         t0 = deepcopy(self.shell_net._alphas)
-
-#         self.optimizer.zero_grad()
-#         y_pred = self.shell_net(x)
-#         loss = self.loss(y_pred, y_truth)
-#         loss.backward()
-#         self.optimizer.step()
-        
-#         pdb.set_trace()
-#         t1 = deepcopy(self.shell_net._alphas)
         

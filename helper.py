@@ -26,7 +26,6 @@ def print_red(something):
     print("\033[1;31m{}\033[0m".format(something))
     
 
-
 def visualize(genotype, filename, caption=None, format='png'):
 #     pdb.set_trace()
     g = Digraph(
