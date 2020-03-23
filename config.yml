@@ -45,3 +45,5 @@ search:
   best_geno_count: 40
   grad_clip: 5
   last_save: log/last_search.pt
+  geno_file: log/best_genotype.pkl
+  

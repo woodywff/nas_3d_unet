@@ -15,8 +15,9 @@ from adabound import AdaBound
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from tqdm import tqdm
 from collections import defaultdict, Counter, OrderedDict
+import pickle
 
-DEBUG_FLAG = False
+DEBUG_FLAG = True
 
 class Searching():
     '''
@@ -100,12 +101,23 @@ class Searching():
         '''
         Return the best genotype
         '''
-        for epoch in range(self.config['search']['epochs']):
+        pdb.set_trace()
+        geno_file = self.config['search']['geno_file']
+        if os.path.exists(geno_file):
+            print('{} exists.'.format(geno_file))
+            with open(geno_file, 'rb') as f:
+                return pickle.load(f)
+
+        best_genotype = None
+        best_geno_count = self.config['search']['best_geno_count']
+        n_epochs = self.config['search']['epochs']
+        for epoch in range(n_epochs):
             genotype = self.model.genotype()
             self.geno_count[str(genotype)] += 1
-            if self.geno_count[str(genotype)] >= self.config['search']['best_geno_count']:
-                print('>= best_geno_count')
-                return genotype
+            if self.geno_count[str(genotype)] >= best_geno_count:
+                print('>= best_geno_count: ({})'.format(best_geno_count))
+                best_genotype = genotype
+                break
 
             shell_loss, kernel_loss = self.train()
             val_loss = self.validate()
@@ -127,7 +139,18 @@ class Searching():
             torch.save(state_dicts, self.save_path)
             
             self.epoch += 1
-        return self.geno_count.most_common(1)
+            if self.epoch > n_epochs:
+                break
+            
+            if DEBUG_FLAG and epoch > 2:
+                break
+                
+        if best_genotype is None:
+            best_genotype = self.geno_count.most_common(1)
+        with open(geno_file, 'wb') as f:
+            pickle.dump(best_genotype, f)
+        return best_genotype
+        
     
     def train(self):
         '''
@@ -177,6 +200,9 @@ class Searching():
                 postfix['Loss(optim_kernel)'] = round(sum_loss/(step+1), 3)
                 pbar.set_postfix(postfix)
                 
+                if DEBUG_FLAG and step > 3:
+                    break
+                
         return round(sum_val_loss/n_steps, 3), round(sum_loss/n_steps, 3)
     
     
@@ -196,6 +222,9 @@ class Searching():
                 loss = self.loss(y_pred, y_truth)
                 sum_loss += loss.item()
                 pbar.set_postfix(Loss=round(sum_loss/(step+1), 3))
+                
+                if DEBUG_FLAG and step > 3:
+                    break
         return round(sum_loss/n_steps, 3)
 
     
