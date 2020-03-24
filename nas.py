@@ -125,7 +125,7 @@ class ShellNet(nn.Module):
                            F.softmax(self.alpha2_down, dim=-1), 
                            F.softmax(self.alpha2_up, dim=-1))
     
-    def genotype(self):
+    def get_gene(self):
         geno_parser = GenoParser(self.n_nodes)
         gene_down = geno_parser.parse(F.softmax(self.alpha1_down, dim=-1).detach().cpu().numpy(),
                            F.softmax(self.alpha2_down, dim=-1).detach().cpu().numpy())

@@ -67,4 +67,4 @@ def visualize(genotype, filename, caption=None, format='png'):
     if caption:
         g.attr(label=caption, overlap='false', fontsize='20', fontname='times')
 
-    g.render(filename, view=True)
+    g.render(filename)

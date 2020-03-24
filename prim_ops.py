@@ -3,21 +3,21 @@ import pdb
 from math import ceil
 
 OPS = {
-'identity':      lambda c, stride: IdentityOp(c, c),
-'se_conv':       lambda c, stride: SEConvOp(c, c),
-'dil_conv':      lambda c, stride: ConvOps(c, c, dilation=2),
-'dep_conv':      lambda c, stride: ConvOps(c, c, depthwised=True),
-'conv':          lambda c, stride: ConvOps(c, c),
-'avg_pool':      lambda c, stride: PoolingOp(c, c, pool_type='avg'),
-'max_pool':      lambda c, stride: PoolingOp(c, c, pool_type='max'),
-'down_se_conv':  lambda c, stride: SEConvOp(c, c, stride=2),
-'down_dil_conv': lambda c, stride: ConvOps(c, c, stride=2, dilation=2),
-'down_dep_conv': lambda c, stride: ConvOps(c, c, stride=2, depthwised=True),
-'down_conv':     lambda c, stride: ConvOps(c, c, stride=2),
-'up_se_conv':    lambda c, stride: SEConvOp(c, c, stride=2, transposed=True),
-'up_dep_conv':   lambda c, stride: ConvOps(c, c, stride=2, depthwised=True, transposed=True),
-'up_conv':       lambda c, stride: ConvOps(c, c, stride=2, transposed=True),
-'up_dil_conv':   lambda c, stride: ConvOps(c, c, stride=2, dilation=2, transposed=True)
+'identity':      lambda c: IdentityOp(c, c),
+'se_conv':       lambda c: SEConvOp(c, c),
+'dil_conv':      lambda c: ConvOps(c, c, dilation=2),
+'dep_conv':      lambda c: ConvOps(c, c, depthwised=True),
+'conv':          lambda c: ConvOps(c, c),
+'avg_pool':      lambda c: PoolingOp(c, c, pool_type='avg'),
+'max_pool':      lambda c: PoolingOp(c, c, pool_type='max'),
+'down_se_conv':  lambda c: SEConvOp(c, c, stride=2),
+'down_dil_conv': lambda c: ConvOps(c, c, stride=2, dilation=2),
+'down_dep_conv': lambda c: ConvOps(c, c, stride=2, depthwised=True),
+'down_conv':     lambda c: ConvOps(c, c, stride=2),
+'up_se_conv':    lambda c: SEConvOp(c, c, stride=2, transposed=True),
+'up_dep_conv':   lambda c: ConvOps(c, c, stride=2, depthwised=True, transposed=True),
+'up_conv':       lambda c: ConvOps(c, c, stride=2, transposed=True),
+'up_dil_conv':   lambda c: ConvOps(c, c, stride=2, dilation=2, transposed=True)
 }
         
 DownOps = [

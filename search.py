@@ -19,19 +19,16 @@ import pickle
 
 DEBUG_FLAG = True
 
-class Searching():
+class Base:
     '''
-    Main class for searching
+    Base class for Searching and Training
     '''
     def __init__(self, jupyter = True):
         self.jupyter = jupyter
         self._init_config()
-        self._init_log()
         self._init_device()
         self._init_dataset()
-        self._init_model()
-        self.check_resume()
-    
+        
     def _init_config(self):
         parser = argparse.ArgumentParser()
         parser.add_argument('--config',type=str,default='config.yml',
@@ -44,9 +41,6 @@ class Searching():
             self.config = yaml.load(f, Loader=yaml.FullLoader)
         return
     
-    def _init_log(self):
-        self.log_dir = self.config['search']['log_dir']
-#         self.writer = SummaryWriter(os.path.join(log_dir, 'tensorboardX_log'))
         
     def _init_device(self):
         if self.config['search']['gpu'] and torch.cuda.is_available() :
@@ -63,6 +57,15 @@ class Searching():
         self.train_generator = dataset.train_generator
         self.val_generator = dataset.val_generator
         return
+
+class Searching(Base):
+    '''
+    Searching process
+    '''
+    def __init__(self, jupyter = True):
+        super().__init__(jupyter=jupyter)
+        self._init_model()
+        self.check_resume()
     
     def _init_model(self):
         self.model = ShellNet(in_channels=len(self.config['data']['all_mods']), 
@@ -79,7 +82,6 @@ class Searching():
         self.optim_kernel = AdaBound(self.model.kernel.parameters(), lr=1e-3, weight_decay=5e-4)
         self.kernel_lr_scheduler = CosineAnnealingLR(self.optim_kernel, 
                                                      self.config['search']['epochs'], eta_min=1e-3)
-        
 
     def check_resume(self):
         self.save_path = self.config['search']['last_save']
@@ -99,7 +101,8 @@ class Searching():
 
     def search(self):
         '''
-        Return the best genotype
+        Return the best genotype in tuple:
+        (best_gene: str(Genotype), geno_count: int)
         '''
         pdb.set_trace()
         geno_file = self.config['search']['geno_file']
@@ -108,15 +111,15 @@ class Searching():
             with open(geno_file, 'rb') as f:
                 return pickle.load(f)
 
-        best_genotype = None
+        best_gene = None
         best_geno_count = self.config['search']['best_geno_count']
         n_epochs = self.config['search']['epochs']
         for epoch in range(n_epochs):
-            genotype = self.model.genotype()
-            self.geno_count[str(genotype)] += 1
-            if self.geno_count[str(genotype)] >= best_geno_count:
+            gene = self.model.get_gene()
+            self.geno_count[str(gene)] += 1
+            if self.geno_count[str(gene)] >= best_geno_count:
                 print('>= best_geno_count: ({})'.format(best_geno_count))
-                best_genotype = genotype
+                best_gene = (str(gene), best_geno_count)
                 break
 
             shell_loss, kernel_loss = self.train()
@@ -142,14 +145,14 @@ class Searching():
             if self.epoch > n_epochs:
                 break
             
-            if DEBUG_FLAG and epoch > 2:
+            if DEBUG_FLAG and epoch >= 1:
                 break
                 
-        if best_genotype is None:
-            best_genotype = self.geno_count.most_common(1)
+        if best_gene is None:
+            best_gene = self.geno_count.most_common(1)[0]
         with open(geno_file, 'wb') as f:
-            pickle.dump(best_genotype, f)
-        return best_genotype
+            pickle.dump(best_gene, f)
+        return best_gene
         
     
     def train(self):
@@ -205,7 +208,6 @@ class Searching():
                 
         return round(sum_val_loss/n_steps, 3), round(sum_loss/n_steps, 3)
     
-    
     def validate(self):
         '''
         Searching | Validation process
@@ -226,8 +228,7 @@ class Searching():
                 if DEBUG_FLAG and step > 3:
                     break
         return round(sum_loss/n_steps, 3)
-
     
 if __name__ == '__main__':
-    search = Searching(jupyter = False)
-    genotype = search.search()
+    searching = Searching(jupyter = False)
+    gene = searching.search()

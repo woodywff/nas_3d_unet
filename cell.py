@@ -18,7 +18,7 @@ class MixedOp(nn.Module):
         else:
             primitives = UpOps if transposed else DownOps
         for pri in primitives:
-            op = OPS[pri](channels, stride)
+            op = OPS[pri](channels)
             self._ops.append(op)
 
     def forward(self, x, alpha1, alpha2):
@@ -65,7 +65,7 @@ class Cell(nn.Module):
 
     def forward(self, x0, x1, alpha1, alpha2):
         '''
-        x0, x1: Inputs of cell
+        x0, x1: Inputs to a cell
         alpha1: Weights for MixedOp with stride == 1
         alpha2: Weights for MixedOp with stride == 2
         '''

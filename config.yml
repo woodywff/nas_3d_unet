@@ -46,4 +46,9 @@ search:
   grad_clip: 5
   last_save: log/last_search.pt
   geno_file: log/best_genotype.pkl
+train:
+  epochs: 200
+  best_shot: log/best_train.pt
+  last_save: log/last_train.pt
+  
   
