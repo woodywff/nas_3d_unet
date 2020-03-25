@@ -26,8 +26,15 @@ class Base:
     def __init__(self, jupyter = True):
         self.jupyter = jupyter
         self._init_config()
+        self._init_log()
         self._init_device()
         self._init_dataset()
+    
+    def _init_log(self):
+        try:
+            os.mkdir(self.config['search']['log_path'])
+        except FileExistsError:
+            pass
         
     def _init_config(self):
         parser = argparse.ArgumentParser()
@@ -40,7 +47,6 @@ class Base:
         with open(self.args.config) as f:
             self.config = yaml.load(f, Loader=yaml.FullLoader)
         return
-    
         
     def _init_device(self):
         if self.config['search']['gpu'] and torch.cuda.is_available() :

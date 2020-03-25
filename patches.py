@@ -9,7 +9,7 @@ from tqdm import tqdm
 def _patching_autofit(image_shape, patch_shape):
     '''
     Autofit patching strategy:
-        Symmetrically cover the image with patches without beyond boundary parts as far as possible.
+        Symmetrically cover the image with patches without beyond boundary parts as much as possible.
     image_shape: numpy.ndarray; shape = (3,)
     patch_shape: numpy.ndarray; shape = (3,)
     '''
@@ -39,11 +39,13 @@ def patching(image_shape, patch_shape, overlap = None):
     Patching for each image.
     image_shape: numpy.ndarray or tuple; shape = (3,)
     patch_shape: numpy.ndarray or tuple; shape = (3,)
-    overlap: int or tuple or numpy.ndarray; shape = (3,); If None, only take the autofit patching strategy, 
+    overlap: int or tuple or numpy.ndarray; 
+             shape = (3,); 
+             If None, only take the autofit patching strategy, 
                   otherwise symmetrically cover the image with patches as much as possible.
                   This is for the augmentation consideration to verify the diversity of input samples.
                   It may not be compulsary.
-    Return list of bottom left corner cords of patches.
+    Return list of bottom left corner coordinate of patches.
     '''
 #     pdb.set_trace()
     image_shape = np.asarray(image_shape)
@@ -98,9 +100,9 @@ def create_id_index_patch_list(id_index_list, data_file, patch_shape, patch_over
     '''
     id_index_list: id_index is the index of .h5.keys()
     data_file: .h5 file path
-    patch_shape: shape = (3,)
+    patch_shape: numpy.ndarray or tuple; shape = (3,)
     patch_overlap: overlap among patches
-    Return: list of (subject id, bottom left corner coordinates of one patch)
+    Return: list of (index of .h5.keys(), bottom left corner coordinates of one patch)
     '''
     id_index_patch_list = []
     with h5py.File(data_file,'r') as h5_file:
@@ -117,7 +119,7 @@ def get_patch_from_3d_data(data, patch_shape, patch_index):
     """
     Returns a patch from a numpy array.
     :param data: numpy array from which to get the patch.
-    :param patch_shape: shape/size of the patch.
+    patch_shape: numpy.ndarray or tuple; shape = (3,)
     :param patch_index: corner index of the patch.
     :return: numpy array take from the data with the patch shape specified.
     """
@@ -128,6 +130,40 @@ def get_patch_from_3d_data(data, patch_shape, patch_index):
         data, patch_index = fix_out_of_bound_patch_attempt(data, patch_shape, patch_index)
     return data[..., patch_index[0]:patch_index[0]+patch_shape[0], patch_index[1]:patch_index[1]+patch_shape[1],
                 patch_index[2]:patch_index[2]+patch_shape[2]]
+
+def get_data_from_file(data_file, id_index_patch, patch_shape):
+        '''
+        Load image patch from .h5 file and mix 4 modalities into one 4d ndarray. 
+        data_file: .h5 file of datasets.
+        id_index_patch: tuple, (id_index is the index of .h5.keys(), patch is the patch coordinate).
+        patch_shape: numpy.ndarray or tuple; shape = (3,)
+        Return x.shape = (4,_,_,_); 
+               y.shape = (1,_,_,_) for training dataset with seg.nii.gz; 
+               y = 0 for validation and test datasets
+        '''
+    #     pdb.set_trace()
+        id_index, patch = id_index_patch
+
+        with h5py.File(data_file,'r') as h5_file:
+            sub_id = list(h5_file.keys())[id_index]
+            brain_width = h5_file[sub_id]['brain_width']
+
+            data = []
+            truth = []
+            for name, img in h5_file[sub_id].items():
+                if name == 'brain_width':
+                    continue
+                brain_wise_img = img[brain_width[0,0]:brain_width[1,0]+1,
+                                    brain_width[0,1]:brain_width[1,1]+1,
+                                    brain_width[0,2]:brain_width[1,2]+1]
+                if name.split('_')[-1].split('.')[0] == 'seg':
+                    truth.append(brain_wise_img)
+                else:
+                    data.append(brain_wise_img)
+
+        x = get_patch_from_3d_data(np.asarray(data), patch_shape, patch)
+        y = get_patch_from_3d_data(np.asarray(truth), patch_shape, patch) if truth else 0
+        return x, y
 
 
 def fix_out_of_bound_patch_attempt(data, patch_shape, patch_index, ndim=3):
@@ -150,45 +186,46 @@ def fix_out_of_bound_patch_attempt(data, patch_shape, patch_index, ndim=3):
     return data, patch_index
 
 
-# def reconstruct_from_patches(patches, patch_indices, data_shape, default_value=0):
-#     """
-#     Reconstructs an array of the original shape from the lists of patches and corresponding patch indices. Overlapping
-#     patches are averaged.
-#     :param patches: List of numpy array patches.
-#     :param patch_indices: List of indices that corresponds to the list of patches.
-#     :param data_shape: Shape of the array from which the patches were extracted.
-#     :param default_value: The default value of the resulting data. if the patch coverage is complete, this value will
-#     be overwritten.
-#     :return: numpy array containing the data reconstructed by the patches.
-#     """
-# #     pdb.set_trace()
-#     data = np.ones(data_shape) * default_value
-#     image_shape = data_shape[-3:]
-#     count = np.zeros(data_shape, dtype=np.int)
-#     image_patch_shape = patches[0].shape[-3:]
-#     for patch, index in zip(patches, patch_indices):
-#         if np.any(index < 0):
-#             fix_patch = np.asarray((index < 0) * np.abs(index), dtype=np.int)
-#             patch = patch[..., fix_patch[0]:, fix_patch[1]:, fix_patch[2]:]
-#             index[index < 0] = 0
-#         if np.any((index + image_patch_shape) >= image_shape):
-#             fix_patch = np.asarray(image_patch_shape - (((index + image_patch_shape) >= image_shape)
-#                                                         * ((index + image_patch_shape) - image_shape)), dtype=np.int)
-#             patch = patch[..., :fix_patch[0], :fix_patch[1], :fix_patch[2]]
-#         patch_index = np.zeros(data_shape, dtype=np.bool)
-#         patch_index[...,
-#                     index[0]:index[0]+patch.shape[-3],
-#                     index[1]:index[1]+patch.shape[-2],
-#                     index[2]:index[2]+patch.shape[-1]] = True
-#         patch_data = np.zeros(data_shape)
-#         patch_data[patch_index] = patch.flatten()
+def reconstruct_from_patches(patches, patch_indices, data_shape, default_value=0):
+    """
+    Reconstructs an array of the original shape from the lists of patches and 
+    corresponding patch indices. Overlapping patches are averaged.
+    :param patches: List of numpy array patches.
+    :param patch_indices: List of indices that corresponds to the list of patches.
+    :param data_shape: Shape of the array from which the patches were extracted.
+    :param default_value: The default value of the resulting data. if the patch coverage is complete, this value will
+    be overwritten.
+    :return: numpy array containing the data reconstructed by the patches.
+    """
+#     pdb.set_trace()
+    data = np.ones(data_shape) * default_value
+    image_shape = data_shape[-3:]
+    count = np.zeros(data_shape, dtype=np.int)
+    image_patch_shape = patches[0].shape[-3:]
+    for patch, index in zip(patches, patch_indices):
+        if np.any(index < 0):
+            fix_patch = np.asarray((index < 0) * np.abs(index), dtype=np.int)
+            patch = patch[..., fix_patch[0]:, fix_patch[1]:, fix_patch[2]:]
+            index[index < 0] = 0
+        if np.any((index + image_patch_shape) >= image_shape):
+            fix_patch = np.asarray(image_patch_shape - (((index + image_patch_shape) >= image_shape)
+                                                        * ((index + image_patch_shape) - image_shape)), dtype=np.int)
+            patch = patch[..., :fix_patch[0], :fix_patch[1], :fix_patch[2]]
+        patch_index = np.zeros(data_shape, dtype=np.bool)
+        patch_index[...,
+                    index[0]:index[0]+patch.shape[-3],
+                    index[1]:index[1]+patch.shape[-2],
+                    index[2]:index[2]+patch.shape[-1]] = True
+        patch_data = np.zeros(data_shape)
+        patch_data[patch_index] = patch.flatten()
 
-#         new_data_index = np.logical_and(patch_index, np.logical_not(count > 0))
-#         data[new_data_index] = patch_data[new_data_index]
+        new_data_index = np.logical_and(patch_index, np.logical_not(count > 0))
+        data[new_data_index] = patch_data[new_data_index]
 
-#         averaged_data_index = np.logical_and(patch_index, count > 0)
-#         if np.any(averaged_data_index):
-#             data[averaged_data_index] = (data[averaged_data_index] * count[averaged_data_index] + patch_data[averaged_data_index]) / (count[averaged_data_index] + 1)
-#         count[patch_index] += 1
-#     return data
+        averaged_data_index = np.logical_and(patch_index, count > 0)
+        if np.any(averaged_data_index):
+            data[averaged_data_index] = (data[averaged_data_index] * count[averaged_data_index] 
+                                         + patch_data[averaged_data_index]) / (count[averaged_data_index] + 1)
+        count[patch_index] += 1
+    return data
 

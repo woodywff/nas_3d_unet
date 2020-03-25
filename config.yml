@@ -5,6 +5,10 @@ data:
   - t1ce
   - flair
   - t2
+  img_shape:
+  - 240
+  - 240
+  - 155
   cross_val_indices: data/cross_val_indices.pkl
   len_testing: 166
   len_training: 335
@@ -32,8 +36,7 @@ data:
   skip_health: true
   spe_file: data/spe.pkl # steps per epoch 
 search:
-  log_dir: log
-  save_log: false
+  log_path: log
   gpu: true
   multi_gpus: false
   init_n_kernels: 4
@@ -50,5 +53,6 @@ train:
   epochs: 200
   best_shot: log/best_train.pt
   last_save: log/last_train.pt
-  
+predict:
+  output_folder: data/predicted
   

@@ -2,7 +2,7 @@ from random import shuffle
 import yaml
 import numpy as np
 import h5py
-from patches import create_id_index_patch_list, get_patch_from_3d_data
+from patches import create_id_index_patch_list, get_patch_from_3d_data, get_data_from_file
 from augment import do_augment, random_permutation_x_y
 import pickle
 from tqdm import tqdm
@@ -64,14 +64,14 @@ class Generator():
         self.indices_list = indices_list # list of indices in .h5.keys()
         self.data_file = data_file # .h5 file path
         self.patch_shape = [patch_shape] * 3 if isinstance(patch_shape,int) else patch_shape
-        self.patch_overlap = patch_overlap
+        self.patch_overlap = patch_overlap # please refer to patches.patching()
         self.batch_size = batch_size
-        self.labels = labels
-        self.augment = augment
-        self.augment_flip = augment_flip
+        self.labels = labels # y_truth values
+        self.augment = augment # whether or not do augmentation
+        self.augment_flip = augment_flip # whether or not flip
         self.augment_distortion_factor = augment_distortion_factor
         self.permute = permute # rotate and flip
-        self.shuffle_index_list = shuffle_index_list
+        self.shuffle_index_list = shuffle_index_list # if True, shuffle the id_index_patch_list for each epoch
         self.affine_file = affine_file # affine.npy path
         self.spe_file = spe_file # steps per epoch .pkl
         self.skip_health = skip_health # True: skip none tumor images
@@ -93,7 +93,6 @@ class Generator():
                                                               self.data_file, 
                                                               self.patch_shape, 
                                                               patch_overlap)
-        
 #         pdb.set_trace()
         if not os.path.exists(self.spe_file):
             with open(self.spe_file, 'wb') as f:
@@ -154,7 +153,7 @@ class Generator():
         '''
     #     pdb.set_trace()
         # data.shape = (4,_,_,_), truth.shape = (1,_,_,_):
-        data, truth = self.get_data_from_file(id_index_patch)
+        data, truth = get_data_from_file(self.data_file, id_index_patch, self.patch_shape)
         # skip empty images
         if np.all(data == 0):
             return
@@ -171,38 +170,6 @@ class Generator():
         x_list.append(data)
         y_list.append(truth)
         return
-    
-    
-    def get_data_from_file(self, id_index_patch):
-        '''
-        Load image patch from .h5 file and mix 4 modalities into one 4d ndarray. 
-        Return x.shape = (4,_,_,_); y.shape = (1,_,_,_)
-        '''
-    #     pdb.set_trace()
-        id_index, patch = id_index_patch
-
-        with h5py.File(self.data_file,'r') as h5_file:
-            sub_id = list(h5_file.keys())[id_index]
-            brain_width = h5_file[sub_id]['brain_width']
-
-            data = []
-            truth = []
-            for name, img in h5_file[sub_id].items():
-                if name == 'brain_width':
-                    continue
-                brain_wise_img = img[brain_width[0,0]:brain_width[1,0]+1,
-                                    brain_width[0,1]:brain_width[1,1]+1,
-                                    brain_width[0,2]:brain_width[1,2]+1]
-                if name.split('_')[-1].split('.')[0] == 'seg':
-                    truth.append(brain_wise_img)
-                else:
-                    data.append(brain_wise_img)
-        data = np.asarray(data)
-        truth = np.asarray(truth)
-
-        x = get_patch_from_3d_data(data, self.patch_shape, patch)
-        y = get_patch_from_3d_data(truth, self.patch_shape, patch)
-        return x, y
 
     def convert_data(self, x_list, y_list):
     #     pdb.set_trace()
@@ -210,7 +177,6 @@ class Generator():
         y = np.asarray(y_list)
         y = self.get_multi_class_labels(y)
         return x, y
-
 
     def get_multi_class_labels(self, truth):
         '''
