@@ -133,8 +133,8 @@ def get_data_from_file(data_file, id_index_patch, patch_shape):
                 if name == 'brain_width':
                     continue
                 brain_wise_img = img[brain_width[0,0]:brain_width[1,0]+1,
-                                    brain_width[0,1]:brain_width[1,1]+1,
-                                    brain_width[0,2]:brain_width[1,2]+1]
+                                     brain_width[0,1]:brain_width[1,1]+1,
+                                     brain_width[0,2]:brain_width[1,2]+1]
                 if name.split('_')[-1].split('.')[0] == 'seg':
                     truth.append(brain_wise_img)
                 else:
@@ -165,11 +165,11 @@ def fix_out_of_bound_patch_attempt(data, patch_shape, patch_corner, ndim=3):
     return data, patch_corner
 
 
-def stitch(patches, patch_corners, data_shape):
+def stitch(patch_list, patch_corners, data_shape):
     '''
     To put patches together.
     Overlapped places would take the mean value.
-    patches: one list of ndarray patches, patch_shape=(3,_,_,_)
+    patch_list: one list of ndarray patches, patch_shape=(3,_,_,_)
     patch_corners: bottom left corner coordinates of patches.
     data_shape: brain-wise shape after stitching, shape=(3,_,_,_)
     Return the brain-wised predicted ndarray shape=data_shape 
@@ -178,8 +178,8 @@ def stitch(patches, patch_corners, data_shape):
     data = np.zeros(data_shape)
     img_shape = data_shape[-3:]
     count = np.zeros(data_shape)
-    patch_shape = patches[0].shape[-3:]
-    for patch, corner in zip(patches, patch_corners):
+    patch_shape = patch_list[0].shape[-3:]
+    for patch, corner in zip(patch_list, patch_corners):
         if np.any(corner < 0):
             start_edge = np.asarray((corner < 0) * np.abs(corner), dtype=np.int)
             patch = patch[:, start_edge[0]:, start_edge[1]:, start_edge[2]:]

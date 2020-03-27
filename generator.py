@@ -172,6 +172,10 @@ class Generator():
         return
 
     def convert_data(self, x_list, y_list):
+        '''
+        Return: x.shape=(batch_size,4,_,_,_)
+                y.shape=(batch_size,3,_,_,_)
+        '''
     #     pdb.set_trace()
         x = np.asarray(x_list)
         y = np.asarray(y_list)
