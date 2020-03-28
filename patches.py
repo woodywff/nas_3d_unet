@@ -72,21 +72,22 @@ def get_set_of_patch_indices(start, stop, step):
     return np.asarray(np.mgrid[start[0]:stop[0]:step[0], start[1]:stop[1]:step[1],
                                start[2]:stop[2]:step[2]].reshape(3, -1).T, dtype=np.int)
 
-def create_id_index_patch_list(id_index_list, data_file, patch_shape, patch_overlap = None):
+def create_id_index_patch_list(id_index_list, data_file, patch_shape, patch_overlap=None, trivial=True):
     '''
     id_index_list: id_index is the index of .h5.keys()
     data_file: .h5 file path
     patch_shape: numpy.ndarray or tuple; shape = (3,)
     patch_overlap: overlap among patches
+    trivial: If True, use tqdm.
     Return: list of (index of .h5.keys(), bottom left corner coordinates of one patch)
     '''
     id_index_patch_list = []
     with h5py.File(data_file,'r') as h5_file:
         id_list = list(h5_file.keys())
-        for index in tqdm(id_index_list,desc = 'Creating (id_index, patch_corner) list'):
+        for index in tqdm(id_index_list,desc = 'Creating (id_index, patch_corner) list') if trivial else id_index_list:
             brain_width = h5_file[id_list[index]]['brain_width']
-            img_shape = brain_width[1] - brain_width[0] + 1
-            patches = patching(img_shape, patch_shape, overlap = patch_overlap)
+            brain_wide_img_shape = brain_width[1] - brain_width[0] + 1
+            patches = patching(brain_wide_img_shape, patch_shape, overlap = patch_overlap)
             id_index_patch_list.extend(itertools.product([index], patches))
     return id_index_patch_list
 

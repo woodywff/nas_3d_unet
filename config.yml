@@ -5,54 +5,53 @@ data:
   - t1ce
   - flair
   - t2
+  aug_distort: 0.25
+  augment: true
+  augment_distortion_factor: 0.25
+  augment_flip: true
+  batch_size_train: 1
+  batch_size_val: 1
+  cross_val_indices: data/cross_val_indices.pkl
   img_shape:
   - 240
   - 240
   - 155
-  cross_val_indices: data/cross_val_indices.pkl
-  len_testing: 166
-  len_training: 335
-  len_validation: 125
-  mean_std_file: data/mean_std.pkl
-  source_test: data/MICCAI_BraTS_2019_Data_Testing
-  source_train: data/MICCAI_BraTS_2019_Data_Training
-  source_val: data/MICCAI_BraTS_2019_Data_Validation
-  testing_h5: data/testing.h5
-  training_h5: data/training.h5
-  validation_h5: data/validation.h5
-  aug_distort: 0.25
   labels:
   - 1
   - 2
   - 4
-  patch_shape: 64
+  len_testing: 166
+  len_training: 335
+  len_validation: 125
+  mean_std_file: data/mean_std.pkl
   patch_overlap: null
-  batch_size_train: 1
-  batch_size_val: 1
-  augment: true
-  augment_flip: true
-  augment_distortion_factor: 0.25
+  patch_shape: 64
   permute: true
   skip_health: true
-  spe_file: data/spe.pkl # steps per epoch 
-search:
-  log_path: log
-  gpu: true
-  multi_gpus: false
-  init_n_kernels: 4
-  depth: 4
-  n_nodes: 3
-  normal_w_share: false
-  channel_change: true
-  epochs: 200
-  best_geno_count: 40
-  grad_clip: 5
-  last_save: log/last_search.pt
-  geno_file: log/best_genotype.pkl
-train:
-  epochs: 200
-  best_shot: log/best_train.pt
-  last_save: log/last_train.pt
+  source_test: data/MICCAI_BraTS_2019_Data_Testing
+  source_train: data/MICCAI_BraTS_2019_Data_Training
+  source_val: data/MICCAI_BraTS_2019_Data_Validation
+  spe_file: data/spe.pkl
+  testing_h5: data/testing.h5
+  training_h5: data/training.h5
+  validation_h5: data/validation.h5
 predict:
   output_folder: data/predicted
-  
+search:
+  best_geno_count: 40
+  channel_change: true
+  depth: 4
+  epochs: 200
+  geno_file: log/best_genotype.pkl
+  gpu: true
+  grad_clip: 5
+  init_n_kernels: 4
+  last_save: log/last_search.pt
+  log_path: log
+  multi_gpus: false
+  n_nodes: 3
+  normal_w_share: false
+train:
+  best_shot: log/best_train.pt
+  epochs: 200
+  last_save: log/last_train.pt
