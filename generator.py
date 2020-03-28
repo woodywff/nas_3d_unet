@@ -5,7 +5,8 @@ import h5py
 from patches import create_id_index_patch_list, get_patch_from_3d_data, get_data_from_file
 from augment import do_augment, random_permutation_x_y
 import pickle
-from tqdm import tqdm
+# from tqdm import tqdm
+from tqdm.notebook import tqdm
 import os
 import pdb
 

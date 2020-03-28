@@ -3,7 +3,8 @@ import nibabel as nib
 import numpy as np
 import h5py
 import pdb
-from tqdm import tqdm
+# from tqdm import tqdm
+from tqdm.notebook import tqdm
 import time
 from helper import print_red
 import pickle

@@ -1,6 +1,4 @@
 import pdb
-# import argparse
-# import yaml
 import os
 import torch
 import torch.nn as nn
@@ -8,11 +6,11 @@ import generator
 from loss import WeightedDiceLoss
 from helper import calc_param_size
 from searched import SearchedNet
-# import sys
 from torch.optim import Adam
 from adabound import AdaBound
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from tqdm import tqdm
+# from tqdm import tqdm
+from tqdm.notebook import tqdm
 from collections import defaultdict
 import pickle
 from genotype import Genotype

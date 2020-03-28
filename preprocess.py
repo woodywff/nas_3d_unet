@@ -6,7 +6,8 @@ from dev_tools.my_tools import print_red, minmax_normalize
 import pdb
 import numpy as np
 import yaml
-from tqdm import tqdm
+# from tqdm import tqdm
+from tqdm.notebook import tqdm
 import pickle
 import time
 from random import shuffle

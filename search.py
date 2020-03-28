@@ -13,7 +13,8 @@ import sys
 from torch.optim import Adam
 from adabound import AdaBound
 from torch.optim.lr_scheduler import CosineAnnealingLR
-from tqdm import tqdm
+# from tqdm import tqdm
+from tqdm.notebook import tqdm
 from collections import defaultdict, Counter, OrderedDict
 import pickle
 
