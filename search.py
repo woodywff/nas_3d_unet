@@ -17,7 +17,7 @@ from tqdm import tqdm
 from collections import defaultdict, Counter, OrderedDict
 import pickle
 
-DEBUG_FLAG = True
+DEBUG_FLAG = False
 
 class Base:
     '''
@@ -84,10 +84,11 @@ class Searching(Base):
         print('Param size = {:.3f} MB'.format(calc_param_size(self.model)))
         self.loss = WeightedDiceLoss().to(self.device)
 
-        self.optim_shell = Adam(self.model.alphas(), lr=3e-4)
-        self.optim_kernel = AdaBound(self.model.kernel.parameters(), lr=1e-3, weight_decay=5e-4)
-        self.kernel_lr_scheduler = CosineAnnealingLR(self.optim_kernel, 
-                                                     self.config['search']['epochs'], eta_min=1e-3)
+        self.optim_shell = Adam(self.model.alphas()) # lr=3e-4
+        self.optim_kernel = Adam(self.model.alphas())
+#         self.optim_kernel = AdaBound(self.model.kernel.parameters(), lr=1e-3, weight_decay=5e-4)
+#         self.kernel_lr_scheduler = CosineAnnealingLR(self.optim_kernel, 
+#                                                      self.config['search']['epochs'], eta_min=1e-3)
 
     def check_resume(self):
         self.save_path = self.config['search']['last_save']
@@ -99,7 +100,7 @@ class Searching(Base):
             self.model.load_state_dict(state_dicts['model_param'])
             self.optim_shell.load_state_dict(state_dicts['optim_shell'])
             self.optim_kernel.load_state_dict(state_dicts['optim_kernel'])
-            self.kernel_lr_scheduler.load_state_dict(state_dicts['scheduler'])
+#             self.kernel_lr_scheduler.load_state_dict(state_dicts['scheduler'])
         else:
             self.epoch = 0
             self.geno_count = Counter()
@@ -110,7 +111,7 @@ class Searching(Base):
         Return the best genotype in tuple:
         (best_gene: str(Genotype), geno_count: int)
         '''
-        pdb.set_trace()
+#         pdb.set_trace()
         geno_file = self.config['search']['geno_file']
         if os.path.exists(geno_file):
             print('{} exists.'.format(geno_file))
@@ -130,7 +131,7 @@ class Searching(Base):
 
             shell_loss, kernel_loss = self.train()
             val_loss = self.validate()
-            self.kernel_lr_scheduler.step()
+#             self.kernel_lr_scheduler.step()
             self.history['shell_loss'].append(shell_loss)
             self.history['kernel_loss'].append(kernel_loss)
             self.history['val_loss'].append(val_loss)
@@ -143,7 +144,7 @@ class Searching(Base):
                 'model_param': self.model.state_dict(),
                 'optim_shell': self.optim_shell.state_dict(),
                 'optim_kernel': self.optim_kernel.state_dict(),
-                'scheduler': self.kernel_lr_scheduler.state_dict()
+#                 'scheduler': self.kernel_lr_scheduler.state_dict()
             }
             torch.save(state_dicts, self.save_path)
             
@@ -199,8 +200,8 @@ class Searching(Base):
                 loss = self.loss(y_pred, y_truth)
                 sum_loss += loss.item()
                 loss.backward()
-                nn.utils.clip_grad_norm_(self.model.kernel.parameters(),
-                                         self.config['search']['grad_clip'])
+#                 nn.utils.clip_grad_norm_(self.model.kernel.parameters(),
+#                                          self.config['search']['grad_clip'])
                 self.optim_kernel.step()
                 
                 # postfix for progress bar
@@ -209,7 +210,7 @@ class Searching(Base):
                 postfix['Loss(optim_kernel)'] = round(sum_loss/(step+1), 3)
                 pbar.set_postfix(postfix)
                 
-                if DEBUG_FLAG and step > 3:
+                if DEBUG_FLAG and step > 1:
                     break
                 
         return round(sum_val_loss/n_steps, 3), round(sum_loss/n_steps, 3)
@@ -231,7 +232,7 @@ class Searching(Base):
                 sum_loss += loss.item()
                 pbar.set_postfix(Loss=round(sum_loss/(step+1), 3))
                 
-                if DEBUG_FLAG and step > 3:
+                if DEBUG_FLAG and step > 1:
                     break
         return round(sum_loss/n_steps, 3)
     

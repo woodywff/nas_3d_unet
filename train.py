@@ -19,9 +19,7 @@ from genotype import Genotype
 import shutil
 from search import Base
 
-DEBUG_FLAG = True
-
-
+DEBUG_FLAG = False
 
     
 class Training(Base):
@@ -47,10 +45,10 @@ class Training(Base):
         print('Param size = {:.3f} MB'.format(calc_param_size(self.model)))
         self.loss = WeightedDiceLoss().to(self.device)
 
-#         self.optim = Adam(self.model.alphas(), lr=3e-4)
-        self.optim = AdaBound(self.model.parameters(), lr=1e-3, weight_decay=5e-4)
-        self.lr_scheduler = CosineAnnealingLR(self.optim, 
-                                              self.config['train']['epochs'], eta_min=1e-3)
+        self.optim = Adam(self.model.parameters())
+#         self.optim = AdaBound(self.model.parameters(), lr=1e-3, weight_decay=5e-4)
+#         self.lr_scheduler = CosineAnnealingLR(self.optim, 
+#                                               self.config['train']['epochs'], eta_min=1e-3)
         
 
     def check_resume(self):
@@ -62,7 +60,7 @@ class Training(Base):
             self.history = state_dicts['history']
             self.model.load_state_dict(state_dicts['model_param'])
             self.optim.load_state_dict(state_dicts['optim'])
-            self.lr_scheduler.load_state_dict(state_dicts['scheduler'])
+#             self.lr_scheduler.load_state_dict(state_dicts['scheduler'])
             self.best_val_loss = state_dicts['best_loss']
         else:
             self.epoch = 0
@@ -74,7 +72,7 @@ class Training(Base):
         Return the best genotype in tuple:
         (best_genotype: str(Genotype), geno_count: int)
         '''
-        pdb.set_trace()
+#         pdb.set_trace()
 
         n_epochs = self.config['train']['epochs']
         
@@ -82,7 +80,7 @@ class Training(Base):
             is_best = False
             loss = self.train()
             val_loss = self.validate()
-            self.lr_scheduler.step()
+#             self.lr_scheduler.step()
             self.history['loss'].append(loss)
             self.history['val_loss'].append(val_loss)
             if val_loss < self.best_val_loss:
@@ -95,7 +93,7 @@ class Training(Base):
                 'history': self.history,
                 'model_param': self.model.state_dict(),
                 'optim': self.optim.state_dict(),
-                'scheduler': self.lr_scheduler.state_dict(),
+#                 'scheduler': self.lr_scheduler.state_dict(),
                 'best_loss': self.best_val_loss
             }
             torch.save(state_dicts, self.last_save)
@@ -131,13 +129,13 @@ class Training(Base):
                 loss = self.loss(y_pred, y_truth)
                 sum_loss += loss.item()
                 loss.backward()
-                nn.utils.clip_grad_norm_(self.model.parameters(),
-                                         self.config['search']['grad_clip'])
+#                 nn.utils.clip_grad_norm_(self.model.parameters(),
+#                                          self.config['search']['grad_clip'])
                 self.optim.step()
                 
                 pbar.set_postfix(Loss=round(sum_loss/(step+1), 3))
                 
-                if DEBUG_FLAG and step > 3:
+                if DEBUG_FLAG and step > 1:
                     break
                 
         return round(sum_loss/n_steps, 3)
@@ -160,7 +158,7 @@ class Training(Base):
                 sum_loss += loss.item()
                 pbar.set_postfix(Loss=round(sum_loss/(step+1), 3))
                 
-                if DEBUG_FLAG and step > 3:
+                if DEBUG_FLAG and step > 1:
                     break
         return round(sum_loss/n_steps, 3)
 
