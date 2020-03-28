@@ -184,7 +184,6 @@ def preprocess(config_yml='config.yml'):
     return
 
 if __name__ == '__main__':
-    from tqdm import tqdm
     preprocess()
 
                           
