@@ -86,7 +86,7 @@ class Searching(Base):
         self.loss = WeightedDiceLoss().to(self.device)
 
         self.optim_shell = Adam(self.model.alphas()) # lr=3e-4
-        self.optim_kernel = Adam(self.model.alphas())
+        self.optim_kernel = Adam(self.model.kernel.parameters())
 #         self.optim_kernel = AdaBound(self.model.kernel.parameters(), lr=1e-3, weight_decay=5e-4)
 #         self.kernel_lr_scheduler = CosineAnnealingLR(self.optim_kernel, 
 #                                                      self.config['search']['epochs'], eta_min=1e-3)
