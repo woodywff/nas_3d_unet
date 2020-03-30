@@ -8,7 +8,7 @@ from helper import calc_param_size
 from searched import SearchedNet
 from torch.optim import Adam
 from adabound import AdaBound
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 # from tqdm import tqdm
 from tqdm.notebook import tqdm
 from collections import defaultdict
@@ -24,7 +24,7 @@ class Training(Base):
     '''
     Training the searched network
     '''
-    def __init__(self, jupyter = True):
+    def __init__(self, jupyter=True):
         super().__init__(jupyter=jupyter)
         self._init_model()
         self.check_resume()
@@ -44,6 +44,7 @@ class Training(Base):
         self.loss = WeightedDiceLoss().to(self.device)
 
         self.optim = Adam(self.model.parameters())
+        self.scheduler = ReduceLROnPlateau(self.optim,verbose=True,patience=5,factor=0.5)
 #         self.optim = AdaBound(self.model.parameters(), lr=1e-3, weight_decay=5e-4)
 #         self.lr_scheduler = CosineAnnealingLR(self.optim, 
 #                                               self.config['train']['epochs'], eta_min=1e-3)
@@ -58,7 +59,7 @@ class Training(Base):
             self.history = state_dicts['history']
             self.model.load_state_dict(state_dicts['model_param'])
             self.optim.load_state_dict(state_dicts['optim'])
-#             self.lr_scheduler.load_state_dict(state_dicts['scheduler'])
+            self.scheduler.load_state_dict(state_dicts['scheduler'])
             self.best_val_loss = state_dicts['best_loss']
         else:
             self.epoch = 0
@@ -78,7 +79,7 @@ class Training(Base):
             is_best = False
             loss = self.train()
             val_loss = self.validate()
-#             self.lr_scheduler.step()
+            self.scheduler.step(val_loss)
             self.history['loss'].append(loss)
             self.history['val_loss'].append(val_loss)
             if val_loss < self.best_val_loss:
@@ -91,7 +92,7 @@ class Training(Base):
                 'history': self.history,
                 'model_param': self.model.state_dict(),
                 'optim': self.optim.state_dict(),
-#                 'scheduler': self.lr_scheduler.state_dict(),
+                'scheduler': self.scheduler.state_dict(),
                 'best_loss': self.best_val_loss
             }
             torch.save(state_dicts, self.last_save)

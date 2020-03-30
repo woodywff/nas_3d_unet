@@ -12,11 +12,12 @@ from nas import ShellNet
 import sys
 from torch.optim import Adam
 from adabound import AdaBound
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 # from tqdm import tqdm
 from tqdm.notebook import tqdm
 from collections import defaultdict, Counter, OrderedDict
 import pickle
+import shutil
 
 DEBUG_FLAG = False
 
@@ -69,7 +70,7 @@ class Searching(Base):
     '''
     Searching process
     '''
-    def __init__(self, jupyter = True):
+    def __init__(self, jupyter=True):
         super().__init__(jupyter=jupyter)
         self._init_model()
         self.check_resume()
@@ -87,25 +88,31 @@ class Searching(Base):
 
         self.optim_shell = Adam(self.model.alphas()) # lr=3e-4
         self.optim_kernel = Adam(self.model.kernel.parameters())
+        self.shell_scheduler = ReduceLROnPlateau(self.optim_shell,verbose=True,patience=5,factor=0.5)
+        self.kernel_scheduler = ReduceLROnPlateau(self.optim_kernel,verbose=True,patience=5,factor=0.5)
 #         self.optim_kernel = AdaBound(self.model.kernel.parameters(), lr=1e-3, weight_decay=5e-4)
 #         self.kernel_lr_scheduler = CosineAnnealingLR(self.optim_kernel, 
 #                                                      self.config['search']['epochs'], eta_min=1e-3)
 
     def check_resume(self):
-        self.save_path = self.config['search']['last_save']
-        if os.path.exists(self.save_path):
-            state_dicts = torch.load(self.save_path, map_location=self.device)
+        self.last_save = self.config['search']['last_save']
+        self.best_shot = self.config['search']['best_shot']
+        if os.path.exists(self.last_save):
+            state_dicts = torch.load(self.last_save, map_location=self.device)
             self.epoch = state_dicts['epoch'] + 1
             self.geno_count = state_dicts['geno_count']
             self.history = state_dicts['history']
             self.model.load_state_dict(state_dicts['model_param'])
             self.optim_shell.load_state_dict(state_dicts['optim_shell'])
             self.optim_kernel.load_state_dict(state_dicts['optim_kernel'])
-#             self.kernel_lr_scheduler.load_state_dict(state_dicts['scheduler'])
+            self.shell_scheduler.load_state_dict(state_dicts['shell_scheduler'])
+            self.kernel_scheduler.load_state_dict(state_dicts['kernel_scheduler'])
+            self.best_val_loss = state_dicts['best_loss']
         else:
             self.epoch = 0
             self.geno_count = Counter()
             self.history = defaultdict(list)
+            self.best_val_loss = 1.0
 
     def search(self):
         '''
@@ -123,6 +130,7 @@ class Searching(Base):
         best_geno_count = self.config['search']['best_geno_count']
         n_epochs = self.config['search']['epochs']
         for epoch in range(n_epochs):
+            is_best = False
             gene = self.model.get_gene()
             self.geno_count[str(gene)] += 1
             if self.geno_count[str(gene)] >= best_geno_count:
@@ -132,10 +140,15 @@ class Searching(Base):
 
             shell_loss, kernel_loss = self.train()
             val_loss = self.validate()
-#             self.kernel_lr_scheduler.step()
+            self.kernel_scheduler.step(kernel_loss)
+            self.shell_scheduler.step(shell_loss)
             self.history['shell_loss'].append(shell_loss)
             self.history['kernel_loss'].append(kernel_loss)
             self.history['val_loss'].append(val_loss)
+            
+            if val_loss < self.best_val_loss:
+                is_best = True
+                self.best_val_loss = val_loss
             
             # Save what the current epoch ends up with.
             state_dicts = {
@@ -145,9 +158,14 @@ class Searching(Base):
                 'model_param': self.model.state_dict(),
                 'optim_shell': self.optim_shell.state_dict(),
                 'optim_kernel': self.optim_kernel.state_dict(),
-#                 'scheduler': self.kernel_lr_scheduler.state_dict()
+                'kernel_scheduler': self.kernel_scheduler.state_dict(),
+                'shell_scheduler': self.kernel_scheduler.state_dict(),
+                'best_loss': self.best_val_loss
             }
-            torch.save(state_dicts, self.save_path)
+            torch.save(state_dicts, self.last_save)
+            
+            if is_best:
+                shutil.copy(self.last_save, self.best_shot)
             
             self.epoch += 1
             if self.epoch > n_epochs:

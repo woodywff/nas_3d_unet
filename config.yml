@@ -47,6 +47,7 @@ search:
   grad_clip: 5
   init_n_kernels: 4
   last_save: log/last_search.pt
+  best_shot: log/best_search.pt
   log_path: log
   multi_gpus: false
   n_nodes: 3
