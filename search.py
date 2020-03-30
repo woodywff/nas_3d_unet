@@ -88,8 +88,8 @@ class Searching(Base):
 
         self.optim_shell = Adam(self.model.alphas()) # lr=3e-4
         self.optim_kernel = Adam(self.model.kernel.parameters())
-        self.shell_scheduler = ReduceLROnPlateau(self.optim_shell,verbose=True,patience=5,factor=0.5)
-        self.kernel_scheduler = ReduceLROnPlateau(self.optim_kernel,verbose=True,patience=5,factor=0.5)
+        self.shell_scheduler = ReduceLROnPlateau(self.optim_shell,verbose=True,patience=3,factor=0.5)
+        self.kernel_scheduler = ReduceLROnPlateau(self.optim_kernel,verbose=True,patience=3,factor=0.5)
 #         self.optim_kernel = AdaBound(self.model.kernel.parameters(), lr=1e-3, weight_decay=5e-4)
 #         self.kernel_lr_scheduler = CosineAnnealingLR(self.optim_kernel, 
 #                                                      self.config['search']['epochs'], eta_min=1e-3)

@@ -44,7 +44,7 @@ class Training(Base):
         self.loss = WeightedDiceLoss().to(self.device)
 
         self.optim = Adam(self.model.parameters())
-        self.scheduler = ReduceLROnPlateau(self.optim,verbose=True,patience=5,factor=0.5)
+        self.scheduler = ReduceLROnPlateau(self.optim,patience=3,factor=0.5)
 #         self.optim = AdaBound(self.model.parameters(), lr=1e-3, weight_decay=5e-4)
 #         self.lr_scheduler = CosineAnnealingLR(self.optim, 
 #                                               self.config['train']['epochs'], eta_min=1e-3)
