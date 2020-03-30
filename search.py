@@ -140,8 +140,8 @@ class Searching(Base):
 
             shell_loss, kernel_loss = self.train()
             val_loss = self.validate()
-            self.kernel_scheduler.step(kernel_loss)
             self.shell_scheduler.step(shell_loss)
+            self.kernel_scheduler.step(val_loss)
             self.history['shell_loss'].append(shell_loss)
             self.history['kernel_loss'].append(kernel_loss)
             self.history['val_loss'].append(val_loss)
