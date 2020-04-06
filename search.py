@@ -25,8 +25,9 @@ class Base:
     '''
     Base class for Searching and Training
     '''
-    def __init__(self, jupyter = True):
+    def __init__(self, jupyter=True, for_final_training=False):
         self.jupyter = jupyter
+        self.for_final_training = for_final_training
         self._init_config()
         self._init_log()
         self._init_device()
@@ -61,7 +62,7 @@ class Base:
         return
     
     def _init_dataset(self):
-        dataset = generator.Dataset()
+        dataset = generator.Dataset(for_final_training=self.for_final_training)
         self.train_generator = dataset.train_generator
         self.val_generator = dataset.val_generator
         return
