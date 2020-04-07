@@ -26,45 +26,48 @@ def print_red(something):
     print("\033[1;31m{}\033[0m".format(something))
     
 
-def visualize(genotype, filename, caption=None, format='png'):
+def visualize(genotype, filename, dc=True, fmt='png'):
+    '''
+    Draw searched downward and upward cells.
+    '''
 #     pdb.set_trace()
-    g = Digraph(
-        format=format,
-        graph_attr = dict(dpi='800'),
-        edge_attr = dict(fontsize='20'),
-        node_attr = dict(style='filled', shape='rect', align='center',
-                         fontsize='20', height='0.5', width='0.5',
-                         penwidth='2'),
-        engine='dot'
-    )
-    g.body.extend(['randkdir=LR'])
-
-    g.node('c_{k-2}', fillcolor='darkseagreen2')
-    g.node('c_{k-1}', fillcolor='darkseagreen2')
+    g = Digraph(format=fmt,
+                graph_attr = dict(dpi='800'),
+                edge_attr = dict(fontsize='20'),
+                node_attr = dict(style='filled', shape='rect', align='center',
+                                 fontsize='20', height='0.5', width='0.5',
+                                 penwidth='2'),
+                engine='dot')
+    g.attr(rankdir='TB' if dc else 'BT')
+    g.node('x0', fillcolor='darkseagreen2',shape='plaintext')
+    g.node('x1', fillcolor='darkseagreen2',shape='plaintext')
+    g.node('p0', label='pre0', fillcolor='ghostwhite')
+    g.node('p1', label='pre1', fillcolor='ghostwhite')
+    g.edge('x0', 'p0')
+    g.edge('x1', 'p1')
     assert len(genotype) % 2 == 0
-    steps = len(genotype) // 2
-
-    for i in range(steps):
-        g.node(str(i), fillcolor='lightblue')
-
-    for i in range(steps):
-        for k in [2*i, 2*i+1]:
-            op, j = genotype[k]
-            if j == 0:
-                u = 'c_{k-2}'
-            elif j == 1:
-                u = 'c_{k-1}'
-            else:
-                u = str(j-2)
-            v = str(i)
-            g.edge(u, v, label=op, fillcolor='gray')
-
-    g.node('c_{k}', fillcolor='palegoldenrod')
-    for i in range(steps):
-        g.edge(str(i), 'c_{k}', fillcolor='gray')
+    n_nodes = len(genotype) // 2
+    
+    xs = ['p0','p1']
+    i = 0
+    for node in range(n_nodes):
+        g.node('add'+str(node), fillcolor='lightblue')
+        with g.subgraph() as s:
+            s.attr(rank='same')
+            for _ in range(2):
+                op, x_i = genotype[i]
+                s.node(str(i), label=op, fillcolor='ghostwhite')
+                g.edge(xs[x_i], str(i))
+                g.edge(str(i),'add'+str(node))
+                i += 1
+        xs.append('add'+str(node))
         
-    # add image caption
-    if caption:
-        g.attr(label=caption, overlap='false', fontsize='20', fontname='times')
+    g.node('concat', label='C', fillcolor='palegoldenrod')
+    for name in xs[-3:]:
+        g.edge(name, 'concat')
+    g.node('y', fillcolor='cyan3', shape='plaintext')
+    g.edge('concat','y')
+    
+    g.attr(label='DC' if dc else 'UC', overlap='false', fontsize='20', fontname='times')
 
     g.render(filename)
