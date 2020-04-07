@@ -66,7 +66,7 @@ class SearchedNet(nn.Module):
         '''
         super().__init__()
         c0 = c1 = n_nodes * init_n_kernels # channel0, channel1, the number of kernels.
-        c_node = init_n_kernels # channel dim doesn't change for different nodes
+        c_node = init_n_kernels 
 
         self.stem0 = ConvOps(in_channels, c0, kernel_size=1, ops_order='weight_norm')
         self.stem1 = ConvOps(in_channels, c1, kernel_size=3,  stride=2, ops_order='weight_norm')
@@ -89,7 +89,7 @@ class SearchedNet(nn.Module):
             c1 = up_cell.out_channels
             c_node = c_node // 2 if channel_change else c_node  # halve the number of filters
         self.last_conv = nn.Sequential(ConvOps(c1, out_channels, kernel_size=1, 
-                                               dropout_rate=0.1, ops_order='weight'),
+                                               dropout_rate=0.5, ops_order='weight'),# dropout_rate is different for searching and training
                                        nn.Sigmoid())
 
     def forward(self, x):
