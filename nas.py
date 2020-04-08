@@ -132,11 +132,7 @@ class ShellNet(nn.Module):
         gene_up = geno_parser.parse(F.softmax(self.alpha1_up, dim=-1).detach().cpu().numpy(),
                          F.softmax(self.alpha2_up, dim=-1).detach().cpu().numpy(), downward=False)
 
-        concat = range(2, self.n_nodes+2)
-        return Genotype(down=gene_down, 
-                        down_concat=concat,
-                        up=gene_up, 
-                        up_concat=concat)
+        return Genotype(down=gene_down, up=gene_up) 
     
 
         

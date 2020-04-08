@@ -51,15 +51,17 @@ def visualize(genotype, filename, dc=True, fmt='png'):
     xs = ['p0','p1']
     i = 0
     for node in range(n_nodes):
-        g.node('add'+str(node), fillcolor='lightblue')
-        with g.subgraph() as s:
-            s.attr(rank='same')
-            for _ in range(2):
-                op, x_i = genotype[i]
-                s.node(str(i), label=op, fillcolor='ghostwhite')
-                g.edge(xs[x_i], str(i))
-                g.edge(str(i),'add'+str(node))
-                i += 1
+        with g.subgraph(name='cluster_{}'.format(node)) as sg:
+            sg.attr(style='dashed', color='red', label='node {}'.format(node))
+            sg.node('add'+str(node), fillcolor='lightblue')
+            with sg.subgraph() as ssg:
+                ssg.attr(rank='same')
+                for _ in range(2):
+                    op, x_i = genotype[i]
+                    ssg.node(str(i), label=op, fillcolor='ghostwhite')
+                    g.edge(xs[x_i], str(i))
+                    g.edge(str(i),'add'+str(node))
+                    i += 1
         xs.append('add'+str(node))
         
     g.node('concat', label='C', fillcolor='palegoldenrod')
@@ -71,3 +73,4 @@ def visualize(genotype, filename, dc=True, fmt='png'):
     g.attr(label='DC' if dc else 'UC', overlap='false', fontsize='20', fontname='times')
 
     g.render(filename)
+    

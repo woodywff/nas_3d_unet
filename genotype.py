@@ -3,7 +3,10 @@ import numpy as np
 from prim_ops import DownOps, UpOps, NormOps
 import pdb
 
-Genotype = namedtuple('Genotype', 'down down_concat up up_concat'.split())
+Genotype = namedtuple('Genotype', ['down','up'])
+'''
+Genotype saves the searched downward cell and upward cell
+'''
 
 class GenoParser:
     def __init__(self, n_nodes):
