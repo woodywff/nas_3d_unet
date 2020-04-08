@@ -134,7 +134,7 @@ class Training(Base):
                 
                 pbar.set_postfix(Loss=round(sum_loss/(step+1), 3))
                 
-                if DEBUG_FLAG and step > 1:
+                if DEBUG_FLAG and step >= 1:
                     break
                 
         return round(sum_loss/n_steps, 3)
@@ -157,7 +157,7 @@ class Training(Base):
                 sum_loss += loss.item()
                 pbar.set_postfix(Loss=round(sum_loss/(step+1), 3))
                 
-                if DEBUG_FLAG and step > 1:
+                if DEBUG_FLAG and step >= 1:
                     break
         return round(sum_loss/n_steps, 3)
 

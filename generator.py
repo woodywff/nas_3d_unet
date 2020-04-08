@@ -24,11 +24,12 @@ class Dataset():
             
     @property
     def _train_indices(self):
-        return self.cross_val_indices['train_list_0'] + (self._val_indices if self.for_final_training else [])
+        return self.cross_val_indices['train_list_0'] + (self.cross_val_indices['val_list_0'] 
+                                                         if self.for_final_training else [])
 
     @property
     def _val_indices(self):
-        return self.cross_val_indices['val_list_0']
+        return self.cross_val_indices['val_list_0'] if not self.for_final_training else self._train_indices
 
     @property
     def train_generator(self):
@@ -51,7 +52,6 @@ class Dataset():
                          patch_shape = self.data_config['patch_shape'], 
                          batch_size= self.data_config['batch_size_val'],
                          labels = self.data_config['labels'], 
-#                          shuffle_index_list = False,
                          spe_file = self.data_config['spe_file'])
 
 class Generator():
@@ -100,7 +100,11 @@ class Generator():
                 pickle.dump({},f)
         with open(self.spe_file, 'rb') as f:
             spes = pickle.load(f)
-        spe_name = '{}_{}_{}_{}'.format(self.indices_list[0], self.patch_shape[0], patch_overlap, self.batch_size)
+        spe_name = '{}_{}_{}_{}_{}'.format(self.indices_list[0], 
+                                           self.indices_list[-1],
+                                           self.patch_shape[0], 
+                                           patch_overlap, 
+                                           self.batch_size)
         if spes.get(spe_name) is None:
             self.steps_per_epoch = self.get_steps_per_epoch()
             spes[spe_name] = self.steps_per_epoch
