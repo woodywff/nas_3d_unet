@@ -28,6 +28,7 @@ def print_red(something):
     
 def plot_cell(filename, n_nodes=3, dc=True, fmt='png'):
     '''
+    Draw the architecture of downward or upward cell for searching.
     filename: save path
     n_nodes: number of nodes
     dc: if True, for downward cell, otherwise for upward cell
@@ -37,8 +38,8 @@ def plot_cell(filename, n_nodes=3, dc=True, fmt='png'):
                 edge_attr = dict(fontsize='20',penwidth='1.5'),
                 node_attr = dict(style='filled', shape='rect', align='center',
                                  fontsize='20', height='0.1', width='0.1',
-                                 penwidth='2'),
-                engine='dot')
+                                 penwidth='2'))
+                #engine='dot')
     g.attr(rankdir='TB' if dc else 'BT')
     g.node('x0', label='X0', fillcolor='white',shape='plaintext')
     g.node('x1', label='X1', fillcolor='white', shape='plaintext')
@@ -76,55 +77,80 @@ def plot_cell(filename, n_nodes=3, dc=True, fmt='png'):
     g.node('y', label='Y', fillcolor='white', shape='plaintext')
     g.edge('concat','y')
     g.render(filename)
+    return
 
-def plot_searched_cell(genotype, filename, dc=True, fmt='png'):
+def plot_searched_cell(op_list, filename, dc=True, fmt='png'):
     '''
     Draw searched downward and upward cells.
     filename: save path
-    genotype: Genotype.down or Genotype.up, Genotype is defined in genotype.py
+    op_list: list of tuple (op_name: str, input_index: int)
     dc: if True, for downward cell, otherwise for upward cell
     '''
-#     pdb.set_trace()
     g = Digraph(format=fmt,
                 graph_attr = dict(dpi='800'),
-                edge_attr = dict(fontsize='20'),
+                edge_attr = dict(fontsize='20',penwidth='1.5'),
                 node_attr = dict(style='filled', shape='rect', align='center',
-                                 fontsize='20', height='0.5', width='0.5',
-                                 penwidth='2'),
-                engine='dot')
+                                 fontsize='20', height='0.1', width='0.1',
+                                 penwidth='2'))
+                #engine='dot')
     g.attr(rankdir='TB' if dc else 'BT')
-    g.node('x0', fillcolor='darkseagreen2',shape='plaintext')
-    g.node('x1', fillcolor='darkseagreen2',shape='plaintext')
-    g.node('p0', label='pre0', fillcolor='ghostwhite')
-    g.node('p1', label='pre1', fillcolor='ghostwhite')
+    g.node('x0', label='X0', fillcolor='white',shape='plaintext')
+    g.node('x1', label='X1', fillcolor='white', shape='plaintext')
+    g.node('p0', label='pre0(s=2)' if dc else 'pre0(s=1)', fillcolor='ghostwhite')
+    g.node('p1', label='pre1(s=1)', fillcolor='ghostwhite')
     g.edge('x0', 'p0')
     g.edge('x1', 'p1')
-    assert len(genotype) % 2 == 0
-    n_nodes = len(genotype) // 2
+    assert len(op_list) % 2 == 0
+    n_nodes = len(op_list) // 2
     
     xs = ['p0','p1']
     i = 0
-    for node in range(n_nodes):
-        with g.subgraph(name='cluster_{}'.format(node)) as sg:
-            sg.attr(style='dashed', color='red', label='node {}'.format(node))
-            sg.node('add'+str(node), fillcolor='lightblue')
+    for node_i in range(n_nodes):
+        with g.subgraph(name='cluster_{}'.format(node_i)) as sg:
+            sg.attr(style='dashed', color='red', label='node {}'.format(node_i), 
+                    fontsize='20', penwidth='1.8', fontcolor='red')
+            name_add = 'add'+str(node_i)
+            sg.node(name=name_add, label='+', fillcolor='lightskyblue2')
             with sg.subgraph() as ssg:
                 ssg.attr(rank='same')
                 for _ in range(2):
-                    op, x_i = genotype[i]
+                    op, x_i = op_list[i]
                     ssg.node(str(i), label=op, fillcolor='ghostwhite')
                     g.edge(xs[x_i], str(i))
-                    g.edge(str(i),'add'+str(node))
+                    g.edge(str(i),name_add)
                     i += 1
-        xs.append('add'+str(node))
+        xs.append(name_add)
         
-    g.node('concat', label='C', fillcolor='palegoldenrod')
+    g.node('concat', label='C', fillcolor='wheat')
     for name in xs[-3:]:
         g.edge(name, 'concat')
-    g.node('y', fillcolor='cyan3', shape='plaintext')
+    g.node('y', label='Y', fillcolor='white', shape='plaintext')
     g.edge('concat','y')
-    
-    g.attr(label='DC' if dc else 'UC', overlap='false', fontsize='20', fontname='times')
-
     g.render(filename)
+    return
+
+from prim_ops import UpOps
+
+def plot_ops(filename, fmt='png'):
+    '''
+    Draw the alpha update mechanism figure.
+    '''
+    g = Digraph(format=fmt,
+                graph_attr = dict(dpi='800'),
+                edge_attr = dict(fontsize='20',penwidth='1.5'),
+                node_attr = dict(style='filled', shape='rect', align='center',
+                                 fontsize='20', height='0.1', width='0.1',
+                                 penwidth='2'))
+    g.node('x', label='X', fillcolor='white',shape='plaintext')
+    g.node('add', label='+', fillcolor='lightskyblue2')
+    with g.subgraph() as sg:
+        sg.attr(rank='same')
+        for op in UpOps:
+            sg.node(op, fillcolor='ghostwhite')
+            g.edge('x',op)
+            g.edge(op,'add')
+    g.node('y', label='Y', fillcolor='white', shape='plaintext')
+    g.edge('add','y')
+    g.render(filename)
+    return    
     
