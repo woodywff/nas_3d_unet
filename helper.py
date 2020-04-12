@@ -26,7 +26,7 @@ def print_red(something):
     print("\033[1;31m{}\033[0m".format(something))
     
     
-def plot_cell(filename, n_nodes=3, dc=True, fmt='png'):
+def plot_cell(filename, n_nodes=3, dc=True, fmt='png', dpi='200'):
     '''
     Draw the architecture of downward or upward cell for searching.
     filename: save path
@@ -34,7 +34,7 @@ def plot_cell(filename, n_nodes=3, dc=True, fmt='png'):
     dc: if True, for downward cell, otherwise for upward cell
     '''
     g = Digraph(format=fmt,
-                graph_attr = dict(dpi='800'),
+                graph_attr = dict(dpi=dpi),
                 edge_attr = dict(fontsize='20',penwidth='1.5'),
                 node_attr = dict(style='filled', shape='rect', align='center',
                                  fontsize='20', height='0.1', width='0.1',
@@ -79,7 +79,7 @@ def plot_cell(filename, n_nodes=3, dc=True, fmt='png'):
     g.render(filename)
     return
 
-def plot_searched_cell(op_list, filename, dc=True, fmt='png'):
+def plot_searched_cell(op_list, filename, dc=True, fmt='png', dpi='200'):
     '''
     Draw searched downward and upward cells.
     filename: save path
@@ -87,7 +87,7 @@ def plot_searched_cell(op_list, filename, dc=True, fmt='png'):
     dc: if True, for downward cell, otherwise for upward cell
     '''
     g = Digraph(format=fmt,
-                graph_attr = dict(dpi='800'),
+                graph_attr = dict(dpi=dpi),
                 edge_attr = dict(fontsize='20',penwidth='1.5'),
                 node_attr = dict(style='filled', shape='rect', align='center',
                                  fontsize='20', height='0.1', width='0.1',
@@ -131,12 +131,12 @@ def plot_searched_cell(op_list, filename, dc=True, fmt='png'):
 
 from prim_ops import UpOps
 
-def plot_ops(filename, fmt='png'):
+def plot_ops(filename, fmt='png', dpi='200'):
     '''
     Draw the alpha update mechanism figure.
     '''
     g = Digraph(format=fmt,
-                graph_attr = dict(dpi='800'),
+                graph_attr = dict(dpi=dpi),
                 edge_attr = dict(fontsize='20',penwidth='1.5'),
                 node_attr = dict(style='filled', shape='rect', align='center',
                                  fontsize='20', height='0.1', width='0.1',
