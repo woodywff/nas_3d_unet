@@ -62,7 +62,7 @@ class Prediction(Base):
         skull_mask is to avoid any predicted tumor voxel staying outside of the skull.
         '''
         if h5file is None:
-            h5file = self.config['data']['testing_h5']
+            h5file = self.config['data']['validation_h5']
         target_folder = os.path.join(self.output_folder, h5file.split('/')[-1])
         try:
             os.mkdir(target_folder)

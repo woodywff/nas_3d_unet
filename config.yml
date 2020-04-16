@@ -54,5 +54,5 @@ search:
   normal_w_share: false
 train:
   best_shot: log/best_train.pt
-  epochs: 200
+  epochs: 400
   last_save: log/last_train.pt
