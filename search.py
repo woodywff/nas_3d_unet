@@ -24,9 +24,13 @@ DEBUG_FLAG = True
 class Base:
     '''
     Base class for Searching and Training
+    jupyter: if True, run in Jupyter Notebook, otherwise in shell.
+    for_search: if True, for search, otherwise for training. Notice patch_search could be different from patch_training.
+    for_final_training: if False, for k-fold-cross-val, otherwise final training will use the whole training dataset.
     '''
-    def __init__(self, jupyter=True, for_final_training=False):
+    def __init__(self, jupyter=True, for_search=True, for_final_training=False):
         self.jupyter = jupyter
+        self.for_search = for_search
         self.for_final_training = for_final_training
         self._init_config()
         self._init_log()
@@ -62,7 +66,7 @@ class Base:
         return
     
     def _init_dataset(self):
-        dataset = generator.Dataset(for_final_training=self.for_final_training)
+        dataset = generator.Dataset(for_search=self.for_search, for_final_training=self.for_final_training)
         self.train_generator = dataset.train_generator
         self.val_generator = dataset.val_generator
         return

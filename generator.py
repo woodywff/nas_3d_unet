@@ -14,7 +14,7 @@ class Dataset():
     '''
     BraTS dataset pipeline for training and validation process.
     It provides to generators for training and validation respectively.
-    for_search: for search or for training, patch_search could be different from patch_training
+    for_search: if True, for search, otherwise for training. Notice patch_search could be different from patch_training.
     for_final_training: if False, for k-fold-cross-val, otherwise final training will use the whole training dataset.
     '''
     def __init__(self, config_yml = 'config.yml', for_search=True, for_final_training=False):
