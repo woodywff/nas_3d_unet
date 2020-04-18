@@ -17,7 +17,7 @@ from genotype import Genotype
 import shutil
 from search import Base
 
-DEBUG_FLAG = True
+DEBUG_FLAG = False
 
     
 class Training(Base):

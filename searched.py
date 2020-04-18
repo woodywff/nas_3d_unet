@@ -5,7 +5,7 @@ from prim_ops import OPS, ConvOps
 import pdb
 from genotype import Genotype
 
-FLAG_DEBUG = True
+FLAG_DEBUG = False
 
 class SearchedCell(nn.Module):
     def __init__(self, n_nodes, c0, c1, c_node, gene, downward=True):

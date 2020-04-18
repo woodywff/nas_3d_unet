@@ -25,7 +25,6 @@ data:
   len_validation: 125
   mean_std_file: data/mean_std.pkl
   patch_overlap: null
-  patch_shape: 128
   permute: true
   skip_health: true
   source_test: data/MICCAI_BraTS_2019_Data_Testing
