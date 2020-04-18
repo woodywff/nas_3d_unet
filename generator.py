@@ -14,12 +14,15 @@ class Dataset():
     '''
     BraTS dataset pipeline for training and validation process.
     It provides to generators for training and validation respectively.
+    for_search: for search or for training, patch_search could be different from patch_training
+    for_final_training: if False, for k-fold-cross-val, otherwise final training will use the whole training dataset.
     '''
-    def __init__(self, config_yml = 'config.yml', for_final_training=False):
+    def __init__(self, config_yml = 'config.yml', for_search=True, for_final_training=False):
         with open(config_yml) as f:
-            self.data_config = yaml.load(f,Loader=yaml.FullLoader)['data']
-        with open(self.data_config['cross_val_indices'],'rb') as f:
+            self.config = yaml.load(f,Loader=yaml.FullLoader)
+        with open(self.config['data']['cross_val_indices'],'rb') as f:
             self.cross_val_indices = pickle.load(f)
+        self.for_search = for_search
         self.for_final_training = for_final_training
             
     @property
@@ -34,25 +37,27 @@ class Dataset():
     @property
     def train_generator(self):
         return Generator(self._train_indices, 
-                         self.data_config['training_h5'], 
-                         patch_shape = self.data_config['patch_shape'], 
-                         patch_overlap = self.data_config['patch_overlap'],
-                         batch_size= self.data_config['batch_size_train'], 
-                         labels = self.data_config['labels'], 
-                         augment = self.data_config['augment'], 
-                         augment_flip = self.data_config['augment_flip'], 
-                         augment_distortion_factor = self.data_config['augment_distortion_factor'], 
-                         permute = self.data_config['permute'],
-                         affine_file = self.data_config['affine_file'],
-                         spe_file = self.data_config['spe_file'])
+                         self.config['data']['training_h5'], 
+                         patch_shape = self.config['search']['patch_shape'] if self.for_search 
+                                  else self.config['train']['patch_shape'], 
+                         patch_overlap = self.config['data']['patch_overlap'],
+                         batch_size= self.config['data']['batch_size_train'], 
+                         labels = self.config['data']['labels'], 
+                         augment = self.config['data']['augment'], 
+                         augment_flip = self.config['data']['augment_flip'], 
+                         augment_distortion_factor = self.config['data']['augment_distortion_factor'], 
+                         permute = self.config['data']['permute'],
+                         affine_file = self.config['data']['affine_file'],
+                         spe_file = self.config['data']['spe_file'])
     @property
     def val_generator(self):
         return Generator(self._val_indices, 
-                         self.data_config['training_h5'], 
-                         patch_shape = self.data_config['patch_shape'], 
-                         batch_size= self.data_config['batch_size_val'],
-                         labels = self.data_config['labels'], 
-                         spe_file = self.data_config['spe_file'])
+                         self.config['data']['training_h5'], 
+                         patch_shape = self.config['search']['patch_shape'] if self.for_search 
+                                  else self.config['train']['patch_shape'], 
+                         batch_size= self.config['data']['batch_size_val'],
+                         labels = self.config['data']['labels'], 
+                         spe_file = self.config['data']['spe_file'])
 
 class Generator():
     def __init__(self, indices_list, data_file, 

@@ -19,7 +19,7 @@ from collections import defaultdict, Counter, OrderedDict
 import pickle
 import shutil
 
-DEBUG_FLAG = False
+DEBUG_FLAG = True
 
 class Base:
     '''

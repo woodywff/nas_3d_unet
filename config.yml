@@ -38,6 +38,7 @@ data:
 predict:
   output_folder: data/predicted
 search:
+  patch_shape: 64
   best_geno_count: 40
   channel_change: true
   depth: 4
@@ -53,6 +54,7 @@ search:
   n_nodes: 3
   normal_w_share: false
 train:
+  patch_shape: 128
   best_shot: log/best_train.pt
-  epochs: 400
+  epochs: 300
   last_save: log/last_train.pt
