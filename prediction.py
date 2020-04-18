@@ -29,7 +29,7 @@ class Prediction(Base):
         '''
         self.img_shape = self.config['data']['img_shape']
         self.output_folder = self.config['predict']['output_folder']
-        patch_shape = self.config['data']['patch_shape']
+        patch_shape = self.config['train']['patch_shape']
         self.patch_shape = [patch_shape] * 3 if isinstance(patch_shape,int) else patch_shape
         self.n_labels = len(self.config['data']['labels'])
         self.affine = np.load(self.config['data']['affine_file'])

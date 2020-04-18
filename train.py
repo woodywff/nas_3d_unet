@@ -25,7 +25,7 @@ class Training(Base):
     Training the searched network
     '''
     def __init__(self, jupyter=True, for_final_training=False):
-        super().__init__(jupyter=jupyter, for_final_training=for_final_training)
+        super().__init__(jupyter=jupyter, for_search=False, for_final_training=for_final_training)
         self._init_model()
         self.check_resume()
     
