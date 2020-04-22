@@ -34,6 +34,7 @@ data:
   testing_h5: data/testing.h5
   training_h5: data/training.h5
   validation_h5: data/validation.h5
+  inclusive_label: false
 predict:
   output_folder: data/predicted
 search:

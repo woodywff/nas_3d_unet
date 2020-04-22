@@ -18,6 +18,7 @@ from patches import create_id_index_patch_list, get_data_from_file, stitch
 class Prediction(Base):
     '''
     Prediction process
+    jupyter: if True, run in Jupyter Notebook, otherwise in shell.
     '''
     def __init__(self, jupyter=True):
         super().__init__(jupyter=jupyter)
@@ -82,7 +83,7 @@ class Prediction(Base):
                         continue
                     skull_mask[np.nonzero(value)] = 1
             single_pred = self.single_img_predict(id_index, h5file, brain_width)
-            tumor_pred = self.get_tumor_pred(single_pred) 
+            tumor_pred = self.get_tumor_pred(single_pred, inclusive_label=self.config['data']['inclusive_label']) 
             tumor_pred *= skull_mask
             nib.Nifti1Image(tumor_pred, self.affine).to_filename(os.path.join(target_folder,
                                            '{}.nii.gz'.format(sub_id)))
@@ -117,16 +118,26 @@ class Prediction(Base):
                      brain_width[0,2]:brain_width[1,2]+1] = brain_wide_pred
         return final_pred
         
-    def get_tumor_pred(self, img_pred, threshold=0.5):
+    def get_tumor_pred(self, img_pred, threshold=0.5, inclusive_label=False):
         '''
         From model's output values (last sigmoid layer's output) to one 3D iamge with tumor labels.
         img_pred: shape=(3,240,240,155)
+        inclusive_label: if True, the three channels of output are: TC(1), WT(2), ET(4)
+                     otherwise, NCR/NET(1), ED(2), ET(4)
         Return: tumor: ndarray with shape=(240,240,155)
         '''
         tumor = np.zeros(img_pred[0].shape, dtype=np.uint8)
-        tumor[img_pred[1] >= threshold] = 2
-        tumor[img_pred[0] >= threshold] = 1
-        tumor[img_pred[2] >= threshold] = 4
+        if inclusive_label:
+            tumor[img_pred[1] >= threshold] = 2
+            tumor[img_pred[0] >= threshold] = 1
+            tumor[img_pred[2] >= threshold] = 4
+        else:
+            tumor[img_pred[0] >= threshold] += 1
+            tumor[img_pred[1] >= threshold] += 2
+            tumor[tumor == 3] = [(1 if i==0 else 2) for i in np.argmax([img_pred[0][tumor==3], img_pred[1][tumor==3]],axis=0)]
+            tumor[img_pred[2] >= threshold] += 4
+            tumor[tumor == 5] = [(1 if i==0 else 4) for i in np.argmax([img_pred[0][tumor==5], img_pred[2][tumor==5]],axis=0)]
+            tumor[tumor == 6] = [(2 if i==0 else 4) for i in np.argmax([img_pred[1][tumor==6], img_pred[2][tumor==6]],axis=0)]
         return tumor
         
 if __name__ == '__main__':

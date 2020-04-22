@@ -48,7 +48,8 @@ class Dataset():
                          augment_distortion_factor = self.config['data']['augment_distortion_factor'], 
                          permute = self.config['data']['permute'],
                          affine_file = self.config['data']['affine_file'],
-                         spe_file = self.config['data']['spe_file'])
+                         spe_file = self.config['data']['spe_file'],
+                         inclusive_label = self.config['data']['inclusive_label'])
     @property
     def val_generator(self):
         return Generator(self._val_indices, 
@@ -57,31 +58,47 @@ class Dataset():
                                   else self.config['train']['patch_shape'], 
                          batch_size= self.config['data']['batch_size_val'],
                          labels = self.config['data']['labels'], 
-                         spe_file = self.config['data']['spe_file'])
+                         spe_file = self.config['data']['spe_file'],
+                         inclusive_label = self.config['data']['inclusive_label'])
 
 class Generator():
+    '''
+    indices_list: list of indices in .h5.keys()
+    data_file: .h5 file path
+    patch_overlap: please refer to patches.patching()
+    labels: y_truth values
+    augment: do augmentation or not
+    augment_flip: flip or not
+    shuffle_index_list: if True, shuffle the id_index_patch_list for each epoch
+    affine_file: affine.npy path
+    spe_file: steps per epoch .pkl
+    skip_health: if True, skip none tumor images
+    inclusive_label: if True, the three channels of output are: TC(1), WT(2), ET(4)
+                     otherwise, NCR/NET(1), ED(2), ET(4)
+    '''
     def __init__(self, indices_list, data_file, 
                        patch_shape, patch_overlap = None, 
                        batch_size=1, labels=None, 
                        augment=False, augment_flip=True, augment_distortion_factor=0.25, permute=False,
                        shuffle_index_list=True, 
                        affine_file = None, spe_file = None,
-                       skip_health = True):
-        self.indices_list = indices_list # list of indices in .h5.keys()
-        self.data_file = data_file # .h5 file path
+                       skip_health = True,
+                       inclusive_label = False):
+        self.indices_list = indices_list
+        self.data_file = data_file
         self.patch_shape = [patch_shape] * 3 if isinstance(patch_shape,int) else patch_shape
-        self.patch_overlap = patch_overlap # please refer to patches.patching()
+        self.patch_overlap = patch_overlap
         self.batch_size = batch_size
-        self.labels = labels # y_truth values
-        self.augment = augment # whether or not do augmentation
-        self.augment_flip = augment_flip # whether or not flip
+        self.labels = labels
+        self.augment = augment
+        self.augment_flip = augment_flip
         self.augment_distortion_factor = augment_distortion_factor
-        self.permute = permute # rotate and flip
-        self.shuffle_index_list = shuffle_index_list # if True, shuffle the id_index_patch_list for each epoch
-        self.affine_file = affine_file # affine.npy path
-        self.spe_file = spe_file # steps per epoch .pkl
-        self.skip_health = skip_health # True: skip none tumor images
-        
+        self.permute = permute
+        self.shuffle_index_list = shuffle_index_list
+        self.affine_file = affine_file
+        self.spe_file = spe_file
+        self.skip_health = skip_health
+        self.inclusive_label = inclusive_label
         self.epoch_init()
         
     
@@ -189,23 +206,25 @@ class Generator():
     #     pdb.set_trace()
         x = np.asarray(x_list)
         y = np.asarray(y_list)
-        y = self.get_multi_class_labels(y)
+        y = self.get_multi_class_labels(y, inclusive_label=self.inclusive_label)
         return x, y
 
-    def get_multi_class_labels(self, truth):
+    def get_multi_class_labels(self, truth, inclusive_label=False):
         '''
         truth.shape is (batch_size,1,patch_shape[0],patch_shape[1],patch_shape[2])
         y.shape is (batch_size,len(labels),_,_,_)
-        truth values:
-            4: ET
-            1+4: TC
-            1+2+4: WT
+        inclusive_label: if True, the three channels of output are: TC(1), WT(2), ET(4)
+                     otherwise, NCR/NET(1), ED(2), ET(4)
         '''
         n_labels = len(self.labels)
         new_shape = [truth.shape[0], n_labels] + list(truth.shape[2:])
         y = np.zeros(new_shape, np.int8)
-
-        y[:,0][np.logical_or(truth[:,0] == 1,truth[:,0] == 4)] = 1    #1
-        y[:,1][np.logical_or(truth[:,0] == 1,truth[:,0] == 2, truth[:,0] == 4)] = 1 #2
-        y[:,2][truth[:,0] == 4] = 1    #4
+        if inclusive_label:
+            y[:,0][np.logical_or(truth[:,0] == 1,truth[:,0] == 4)] = 1    #1
+            y[:,1][np.logical_or(truth[:,0] == 1,truth[:,0] == 2, truth[:,0] == 4)] = 1 #2
+            y[:,2][truth[:,0] == 4] = 1    #4
+        else:
+            y[:,0][truth[:,0] == 1]
+            y[:,1][truth[:,0] == 2]
+            y[:,2][truth[:,0] == 4]
         return y
