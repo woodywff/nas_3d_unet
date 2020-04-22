@@ -22,7 +22,7 @@ def _patching_autofit(img_shape, patch_shape):
             start[dim] = -(patch_shape[dim] - img_shape[dim])//2
             step[dim] = patch_shape[dim]
         else:
-            overlap = np.ceil(n_patches[dim] * patch_shape[dim] - img_shape[dim])/(n_patches[dim] - 1)
+            overlap = np.floor(n_patches[dim] * patch_shape[dim] - img_shape[dim])/(n_patches[dim] - 1)
             overflow = n_patches[dim] * patch_shape[dim] - (n_patches[dim] - 1) * overlap - img_shape[dim]
             start[dim] = - overflow//2
             step[dim] = patch_shape[dim] - overlap
