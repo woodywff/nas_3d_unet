@@ -224,7 +224,7 @@ class Generator():
             y[:,1][np.logical_or(truth[:,0] == 1,truth[:,0] == 2, truth[:,0] == 4)] = 1 #2
             y[:,2][truth[:,0] == 4] = 1    #4
         else:
-            y[:,0][truth[:,0] == 1]
-            y[:,1][truth[:,0] == 2]
-            y[:,2][truth[:,0] == 4]
+            y[:,0][truth[:,0] == 1] = 1
+            y[:,1][truth[:,0] == 2] = 1
+            y[:,2][truth[:,0] == 4] = 1
         return y
