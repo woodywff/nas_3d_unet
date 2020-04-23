@@ -19,7 +19,7 @@ from collections import defaultdict, Counter, OrderedDict
 import pickle
 import shutil
 
-DEBUG_FLAG = False
+DEBUG_FLAG = True
 
 class Base:
     '''
@@ -53,6 +53,11 @@ class Base:
             self.args = parser.parse_args()
         with open(self.args.config) as f:
             self.config = yaml.load(f, Loader=yaml.FullLoader)
+            
+        print('data[patch_overlap] =', self.config['data']['patch_overlap'])
+        print('search[patch_shape] =', self.config['search']['patch_shape'])
+        print('train[patch_shape] =', self.config['train']['patch_shape'])
+        print('train[epochs] =', self.config['train']['epochs'])
         return
         
     def _init_device(self):

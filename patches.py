@@ -8,8 +8,8 @@ from tqdm.notebook import tqdm
 
 def _patching_autofit(img_shape, patch_shape):
     '''
-    Autofit patching strategy:
-        Symmetrically cover the image with patches without beyond boundary parts as much as possible.
+    Auto-fitting patching strategy:
+    Symmetrically cover the image with the least number of patches.
     img_shape: numpy.ndarray; shape = (3,)
     patch_shape: numpy.ndarray; shape = (3,)
     '''
@@ -34,26 +34,27 @@ def _patching_autofit(img_shape, patch_shape):
     
     return patches
 
-def patching(img_shape, patch_shape, overlap = None):
+def patching(img_shape, patch_shape, overlap = None, both_ps=False):
     '''
-    Patching for each image.
+    Patching strategy with a given overlap.
     img_shape: numpy.ndarray or tuple; shape = (3,)
     patch_shape: numpy.ndarray or tuple; shape = (3,)
     overlap: int or tuple or numpy.ndarray; 
              shape = (3,); 
-             If None, only take the autofit patching strategy, 
-                  otherwise symmetrically cover the image with patches as much as possible.
-                  This is for the augmentation consideration to verify the diversity of input samples.
-                  It may not be compulsary.
+             If None, only return the auto-fitting patches, 
+             otherwise symmetrically cover the image with the least number of overlapped patches.
+             This is for the augmentation consideration to verify the diversity of input samples.
+             It may not be compulsary.
+    both_ps: if True, use both patching strategies.
     Return list of bottom left corner coordinate of patches.
     '''
 #     pdb.set_trace()
     img_shape = np.asarray(img_shape)
     patch_shape = np.asarray(patch_shape)
     
-    patches = _patching_autofit(img_shape, patch_shape)
+    auto_patches = _patching_autofit(img_shape, patch_shape)
     if overlap is None:
-        return patches
+        return auto_patches
     
     if isinstance(overlap, int):
         overlap = np.asarray([overlap] * len(img_shape))
@@ -64,21 +65,23 @@ def patching(img_shape, patch_shape, overlap = None):
     start = -overflow//2
     step = patch_shape - overlap
     stop = start + n_patches * step
+    ol_patches = np.vstack(((img_shape - patch_shape)//2,get_set_of_patch_indices(start, stop, step)))
     
-    patches = np.vstack((patches,get_set_of_patch_indices(start, stop, step)))
-    
-    return patches
+    return np.vstack((auto_patches, ol_patches)) if both_ps else ol_patches
+
 
 def get_set_of_patch_indices(start, stop, step):
     return np.asarray(np.mgrid[start[0]:stop[0]:step[0], start[1]:stop[1]:step[1],
                                start[2]:stop[2]:step[2]].reshape(3, -1).T, dtype=np.int)
 
-def create_id_index_patch_list(id_index_list, data_file, patch_shape, patch_overlap=None, trivial=True):
+def create_id_index_patch_list(id_index_list, data_file, patch_shape, 
+                               patch_overlap=None, both_ps=False, trivial=True):
     '''
     id_index_list: id_index is the index of .h5.keys()
     data_file: .h5 file path
     patch_shape: numpy.ndarray or tuple; shape = (3,)
     patch_overlap: overlap among patches
+    both_ps: if True, use both patching strategies.
     trivial: If True, use tqdm.
     Return: list of (index of .h5.keys(), bottom left corner coordinates of one patch)
     '''
@@ -88,7 +91,7 @@ def create_id_index_patch_list(id_index_list, data_file, patch_shape, patch_over
         for index in tqdm(id_index_list,desc = 'Creating (id_index, patch_corner) list') if trivial else id_index_list:
             brain_width = h5_file[id_list[index]]['brain_width']
             brain_wide_img_shape = brain_width[1] - brain_width[0] + 1
-            patches = patching(brain_wide_img_shape, patch_shape, overlap = patch_overlap)
+            patches = patching(brain_wide_img_shape, patch_shape, overlap = patch_overlap, both_ps=both_ps)
             id_index_patch_list.extend(itertools.product([index], patches))
     return id_index_patch_list
 

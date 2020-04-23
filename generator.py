@@ -9,6 +9,9 @@ import pickle
 from tqdm.notebook import tqdm
 import os
 import pdb
+import random
+
+DEBUG_FLAG = True
 
 class Dataset():
     '''
@@ -49,7 +52,8 @@ class Dataset():
                          permute = self.config['data']['permute'],
                          affine_file = self.config['data']['affine_file'],
                          spe_file = self.config['data']['spe_file'],
-                         inclusive_label = self.config['data']['inclusive_label'])
+                         inclusive_label = self.config['data']['inclusive_label'],
+                         both_ps=self.config['data']['both_ps'])
     @property
     def val_generator(self):
         return Generator(self._val_indices, 
@@ -75,6 +79,13 @@ class Generator():
     skip_health: if True, skip none tumor images
     inclusive_label: if True, the three channels of output are: TC(1), WT(2), ET(4)
                      otherwise, NCR/NET(1), ED(2), ET(4)
+    both_ps: if True, use both patching strategies.
+            if patch_overlap == None:
+                auto-fitting only
+            elif both_ps:
+                auto-fitting + random-overlap
+            else:
+                random-overlap only
     '''
     def __init__(self, indices_list, data_file, 
                        patch_shape, patch_overlap = None, 
@@ -83,7 +94,8 @@ class Generator():
                        shuffle_index_list=True, 
                        affine_file = None, spe_file = None,
                        skip_health = True,
-                       inclusive_label = False):
+                       inclusive_label = False,
+                       both_ps=False):
         self.indices_list = indices_list
         self.data_file = data_file
         self.patch_shape = [patch_shape] * 3 if isinstance(patch_shape,int) else patch_shape
@@ -99,6 +111,7 @@ class Generator():
         self.spe_file = spe_file
         self.skip_health = skip_health
         self.inclusive_label = inclusive_label
+        self.both_ps = both_ps
         self.epoch_init()
         
     
@@ -112,10 +125,14 @@ class Generator():
         that's when the overlap varies as a random int from 0 to self.patch_overlap (inclusive).
         '''
         patch_overlap = self.patch_overlap if not self.patch_overlap else random.randint(0,self.patch_overlap + 1)
-        self.id_index_patch_list = create_id_index_patch_list(self.indices_list, 
-                                                              self.data_file, 
-                                                              self.patch_shape, 
-                                                              patch_overlap)
+        if DEBUG_FLAG: 
+            if self.patch_overlap is not None:
+                print('patch_overlap in config.yml: {}; current patch_overlap: {}'.format(self.patch_overlap,patch_overlap))
+        self.id_index_patch_list = create_id_index_patch_list(id_index_list=self.indices_list, 
+                                                              data_file=self.data_file, 
+                                                              patch_shape=self.patch_shape, 
+                                                              patch_overlap=patch_overlap,
+                                                              both_ps=self.both_ps)
 #         pdb.set_trace()
         if not os.path.exists(self.spe_file):
             with open(self.spe_file, 'wb') as f:
