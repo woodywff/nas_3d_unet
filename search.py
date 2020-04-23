@@ -74,11 +74,13 @@ class Base:
 class Searching(Base):
     '''
     Searching process
+    jupyter: if True, run in Jupyter Notebook, otherwise in shell.
+    new_lr: if True, check_resume() will not load the saved states of optimizers and lr_schedulers.
     '''
-    def __init__(self, jupyter=True):
+    def __init__(self, jupyter=True, new_lr=False):
         super().__init__(jupyter=jupyter)
         self._init_model()
-        self.check_resume()
+        self.check_resume(new_lr=new_lr)
     
     def _init_model(self):
         self.model = ShellNet(in_channels=len(self.config['data']['all_mods']), 
@@ -95,11 +97,8 @@ class Searching(Base):
         self.optim_kernel = Adam(self.model.kernel.parameters())
         self.shell_scheduler = ReduceLROnPlateau(self.optim_shell,verbose=True,factor=0.5)
         self.kernel_scheduler = ReduceLROnPlateau(self.optim_kernel,verbose=True,factor=0.5)
-#         self.optim_kernel = AdaBound(self.model.kernel.parameters(), lr=1e-3, weight_decay=5e-4)
-#         self.kernel_lr_scheduler = CosineAnnealingLR(self.optim_kernel, 
-#                                                      self.config['search']['epochs'], eta_min=1e-3)
 
-    def check_resume(self):
+    def check_resume(self, new_lr=False):
         self.last_save = self.config['search']['last_save']
         self.best_shot = self.config['search']['best_shot']
         if os.path.exists(self.last_save):
@@ -108,10 +107,11 @@ class Searching(Base):
             self.geno_count = state_dicts['geno_count']
             self.history = state_dicts['history']
             self.model.load_state_dict(state_dicts['model_param'])
-            self.optim_shell.load_state_dict(state_dicts['optim_shell'])
-            self.optim_kernel.load_state_dict(state_dicts['optim_kernel'])
-            self.shell_scheduler.load_state_dict(state_dicts['shell_scheduler'])
-            self.kernel_scheduler.load_state_dict(state_dicts['kernel_scheduler'])
+            if not new_lr:
+                self.optim_shell.load_state_dict(state_dicts['optim_shell'])
+                self.optim_kernel.load_state_dict(state_dicts['optim_kernel'])
+                self.shell_scheduler.load_state_dict(state_dicts['shell_scheduler'])
+                self.kernel_scheduler.load_state_dict(state_dicts['kernel_scheduler'])
             self.best_val_loss = state_dicts['best_loss']
         else:
             self.epoch = 0
