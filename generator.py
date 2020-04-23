@@ -32,7 +32,7 @@ class Dataset():
 
     @property
     def _val_indices(self):
-        return self.cross_val_indices['val_list_0'] if not self.for_final_training else self._train_indices
+        return self.cross_val_indices['val_list_0'] #if not self.for_final_training else self._train_indices
 
     @property
     def train_generator(self):
