@@ -139,10 +139,11 @@ class Generator():
                 pickle.dump({},f)
         with open(self.spe_file, 'rb') as f:
             spes = pickle.load(f)
-        spe_name = '{}_{}_{}_{}_{}'.format(self.indices_list[0], 
+        spe_name = '{}_{}_{}_{}_{}_{}'.format(self.indices_list[0], 
                                            self.indices_list[-1],
                                            self.patch_shape[0], 
-                                           patch_overlap, 
+                                           patch_overlap,
+                                           self.both_ps,
                                            self.batch_size)
         if spes.get(spe_name) is None:
             self.steps_per_epoch = self.get_steps_per_epoch()
