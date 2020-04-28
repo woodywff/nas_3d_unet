@@ -35,7 +35,7 @@ data:
   training_h5: data/training.h5
   validation_h5: data/validation.h5
   inclusive_label: true
-  both_ps: false
+  both_ps: true
 predict:
   output_folder: data/predicted
 search:

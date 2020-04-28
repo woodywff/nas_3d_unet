@@ -59,6 +59,7 @@ class Base:
         print('train[patch_shape] =', self.config['train']['patch_shape'])
         print('train[epochs] =', self.config['train']['epochs'])
         print('data[inclusive_label] =', self.config['data']['inclusive_label'])
+        print('data[both_ps] =', self.config['data']['both_ps'])
         return
         
     def _init_device(self):
