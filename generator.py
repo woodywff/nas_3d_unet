@@ -124,7 +124,7 @@ class Generator():
         For a certain Generator(), the spe value mainly changes when self.patch_overlap is not None or 0,
         that's when the overlap varies as a random int from 0 to self.patch_overlap (inclusive).
         '''
-        patch_overlap = self.patch_overlap if not self.patch_overlap else random.randint(0,self.patch_overlap + 1)
+        patch_overlap = self.patch_overlap if not self.patch_overlap else random.randint(0,self.patch_overlap)
         if DEBUG_FLAG: 
             if self.patch_overlap is not None:
                 print('patch_overlap in config.yml: {}; current patch_overlap: {}'.format(self.patch_overlap,patch_overlap))
