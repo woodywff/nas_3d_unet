@@ -143,9 +143,9 @@ def cal_mean_std(source_folder, overwrite=False,config_yml = 'config.yml'):
         pickle.dump(mean_std_values,f)
     return
     
-def cross_val_split(n_subs, saved_path, n_folders=5, overwrite=False):
+def cross_val_split(n_subs, saved_path, n_fold=5, overwrite=False):
     '''
-    To generate n_folders cross validation.
+    To generate n_fold cross validation.
     Return {'train_list_0':[],'val_list_0':[],...}
     '''
     if os.path.exists(saved_path) and not overwrite:
@@ -154,9 +154,9 @@ def cross_val_split(n_subs, saved_path, n_folders=5, overwrite=False):
     subid_indices = list(range(n_subs))
     shuffle(subid_indices)
     res = {}
-    for i in range(n_folders):
-        left = int(i/n_folders * n_subs)
-        right = int((i+1)/n_folders * n_subs)
+    for i in range(n_fold):
+        left = int(i/n_fold * n_subs)
+        right = int((i+1)/n_fold * n_subs)
         res['train_list_{:d}'.format(i)] = subid_indices[:left] + subid_indices[right:]
         res['val_list_{:d}'.format(i)] = subid_indices[left : right]
     for i in res.values():
