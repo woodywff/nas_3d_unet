@@ -56,10 +56,10 @@ class Prediction(Base):
         state_dicts = torch.load(self.config['train']['best_shot'], map_location=self.device)
         self.model.load_state_dict(state_dicts['model_param'])
         self.model.eval()
-        pdb.set_trace()
-        x = torch.as_tensor(np.random.rand(1,4,256,256,160), device=self.device, dtype=torch.float)
-        y = self.model(x)[0].detach().cpu().numpy()
-        pdb.set_trace()
+#         pdb.set_trace()
+#         x = torch.as_tensor(np.random.rand(1,4,256,256,160), device=self.device, dtype=torch.float)
+#         y = self.model(x)[0].detach().cpu().numpy()
+#         pdb.set_trace()
         
     def predict(self, h5file=None, no_patch=False):
         '''
