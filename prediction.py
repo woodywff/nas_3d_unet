@@ -108,8 +108,9 @@ class Prediction(Base):
             sub_id = list(f.keys())[id_index]
             data = []
             for name, img in f[sub_id].items():
-                if name != 'brain_width':
+                if name != 'brain_width' and name.split('_')[-1].split('.')[0] != 'seg':
                     data.append(np.asarray(img))
+                truth.append(brain_wise_img)
         data = np.asarray(data)
         if np.all(data==0):
             return np.zeros([self.n_labels] + self.img_shape)
