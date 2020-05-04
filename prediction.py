@@ -104,7 +104,6 @@ class Prediction(Base):
         Full scale prediction.
         Prediction for single full scale image without patching strategies.
         '''
-        pdb.set_trace()
         with h5py.File(h5file,'r') as f:
             sub_id = list(f.keys())[id_index]
             data = []
