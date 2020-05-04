@@ -121,12 +121,16 @@ def get_data_from_file(data_file, id_index_patch, patch_shape):
         id_index_patch: tuple, (id_index is the index of .h5.keys(), 
                                 patch is the patch corner coordinate).
         patch_shape: numpy.ndarray or tuple; shape = (3,)
+        If patch_shape is None, no patching, id_index_patch=id_index.
         Return x.shape = (4,_,_,_); 
                y.shape = (1,_,_,_) for training dataset with seg.nii.gz; 
                y = 0 for validation and test datasets
         '''
     #     pdb.set_trace()
-        id_index, corner = id_index_patch
+        if patch_shape is None:
+            id_index = id_index_patch
+        else:
+            id_index, corner = id_index_patch
 
         with h5py.File(data_file,'r') as h5_file:
             sub_id = list(h5_file.keys())[id_index]
@@ -144,9 +148,12 @@ def get_data_from_file(data_file, id_index_patch, patch_shape):
                     truth.append(brain_wise_img)
                 else:
                     data.append(brain_wise_img)
-
-        x = get_patch_from_3d_data(np.asarray(data), patch_shape, corner)
-        y = get_patch_from_3d_data(np.asarray(truth), patch_shape, corner) if truth else None
+        if patch_shape is None:
+            x = np.asarray(data)
+            y = np.asarray(truth)
+        else:
+            x = get_patch_from_3d_data(np.asarray(data), patch_shape, corner)
+            y = get_patch_from_3d_data(np.asarray(truth), patch_shape, corner) if truth else None
         return x, y
 
 
