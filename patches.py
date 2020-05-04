@@ -115,46 +115,38 @@ def get_patch_from_3d_data(data, patch_shape, patch_corner):
                 patch_corner[2]:patch_corner[2]+patch_shape[2]]
 
 def get_data_from_file(data_file, id_index_patch, patch_shape):
-        '''
-        Load image patch from .h5 file and mix 4 modalities into one 4d ndarray. 
-        data_file: .h5 file of datasets.
-        id_index_patch: tuple, (id_index is the index of .h5.keys(), 
-                                patch is the patch corner coordinate).
-        patch_shape: numpy.ndarray or tuple; shape = (3,)
-        If patch_shape is None, no patching, id_index_patch=id_index.
-        Return x.shape = (4,_,_,_); 
-               y.shape = (1,_,_,_) for training dataset with seg.nii.gz; 
-               y = 0 for validation and test datasets
-        '''
-    #     pdb.set_trace()
-        if patch_shape is None:
-            id_index = id_index_patch
-        else:
-            id_index, corner = id_index_patch
+    '''
+    Load image patch from .h5 file and mix 4 modalities into one 4d ndarray. 
+    data_file: .h5 file of datasets.
+    id_index_patch: tuple, (id_index is the index of .h5.keys(), 
+                            patch is the patch corner coordinate).
+    patch_shape: numpy.ndarray or tuple; shape = (3,)
+    Return x.shape = (4,_,_,_); 
+           y.shape = (1,_,_,_) for training dataset with seg.nii.gz; 
+           y = 0 for validation and test datasets
+    '''
+#     pdb.set_trace()
+    id_index, corner = id_index_patch
 
-        with h5py.File(data_file,'r') as h5_file:
-            sub_id = list(h5_file.keys())[id_index]
-            brain_width = h5_file[sub_id]['brain_width']
+    with h5py.File(data_file,'r') as h5_file:
+        sub_id = list(h5_file.keys())[id_index]
+        brain_width = h5_file[sub_id]['brain_width']
 
-            data = []
-            truth = []
-            for name, img in h5_file[sub_id].items():
-                if name == 'brain_width':
-                    continue
-                brain_wise_img = img[brain_width[0,0]:brain_width[1,0]+1,
-                                     brain_width[0,1]:brain_width[1,1]+1,
-                                     brain_width[0,2]:brain_width[1,2]+1]
-                if name.split('_')[-1].split('.')[0] == 'seg':
-                    truth.append(brain_wise_img)
-                else:
-                    data.append(brain_wise_img)
-        if patch_shape is None:
-            x = np.asarray(data)
-            y = np.asarray(truth)
-        else:
-            x = get_patch_from_3d_data(np.asarray(data), patch_shape, corner)
-            y = get_patch_from_3d_data(np.asarray(truth), patch_shape, corner) if truth else None
-        return x, y
+        data = []
+        truth = []
+        for name, img in h5_file[sub_id].items():
+            if name == 'brain_width':
+                continue
+            brain_wise_img = img[brain_width[0,0]:brain_width[1,0]+1,
+                                 brain_width[0,1]:brain_width[1,1]+1,
+                                 brain_width[0,2]:brain_width[1,2]+1]
+            if name.split('_')[-1].split('.')[0] == 'seg':
+                truth.append(brain_wise_img)
+            else:
+                data.append(brain_wise_img)
+    x = get_patch_from_3d_data(np.asarray(data), patch_shape, corner)
+    y = get_patch_from_3d_data(np.asarray(truth), patch_shape, corner) if truth else None
+    return x, y
 
 
 def fix_out_of_bound_patch_attempt(data, patch_shape, patch_corner, ndim=3):

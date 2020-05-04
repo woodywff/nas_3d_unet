@@ -24,7 +24,7 @@ data:
   len_training: 335
   len_validation: 125
   mean_std_file: data/mean_std.pkl
-  patch_overlap: 64
+  patch_overlap: null
   permute: true
   skip_health: true
   source_test: data/MICCAI_BraTS_2019_Data_Testing
@@ -35,7 +35,7 @@ data:
   training_h5: data/training.h5
   validation_h5: data/validation.h5
   inclusive_label: true
-  both_ps: true
+  both_ps: false
 predict:
   output_folder: data/predicted
 search:

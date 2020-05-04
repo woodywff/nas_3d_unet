@@ -88,47 +88,61 @@ class Prediction(Base):
                         brain_width = np.asarray(value)
                         continue
                     skull_mask[np.nonzero(value)] = 1
-            single_pred = self.single_img_predict(id_index, h5file, brain_width, no_patch=no_patch)
+            if no_patch:
+                single_pred = self.fs_pred(id_index, h5file)
+            else:
+                single_pred = self.patch_pred(id_index, h5file, brain_width)
             tumor_pred = self.get_tumor_pred(single_pred, inclusive_label=self.config['data']['inclusive_label']) 
             tumor_pred *= skull_mask
             nib.Nifti1Image(tumor_pred, self.affine).to_filename(os.path.join(target_folder,
                                            '{}.nii.gz'.format(sub_id)))
         print('Prediction Finished.')
         return
-            
-    def single_img_predict(self, id_index, h5file, brain_width, no_patch=False):
+    
+    def fs_pred(self, id_index, h5file):
         '''
+        Full scale prediction.
+        Prediction for single full scale image without patching strategies.
+        '''
+        pdb.set_trace()
+        with h5py.File(h5file,'r') as f:
+            sub_id = list(f.keys())[id_index]
+            data = []
+            for name, img in f[sub_id].items():
+                if name != 'brain_width':
+                    data.append(np.asarray(img))
+        data = np.asarray(data)
+        if np.all(data==0):
+            return np.zeros([self.n_labels] + self.img_shape)
+        data = np.pad(data,((0,0),(0,16),(0,16),(0,5)),'constant', constant_values=0)
+        x = torch.as_tensor([data], device=self.device, dtype=torch.float)
+        y = self.model(x)[0].detach().cpu().numpy()
+        return y[:,:240,:240,:155]
+            
+    def patch_pred(self, id_index, h5file, brain_width):
+        '''
+        Prediction for single image with patching strategies.
         id_index: the index of .h5.keys()
         h5file: .h5 file path
         brain_width: minimum cubic area that could encapsulate the brain.
-        no_patch: if True, use the whole image rather than patches.
         Return: original sized image in shape of (3,240,240,155)
         '''
+        id_index_patch_list = create_id_index_patch_list([id_index], h5file, 
+                                                         self.patch_shape, trivial=False)
+        patch_pred_list = []
+        for id_index_patch in id_index_patch_list:
+            data, _ = get_data_from_file(h5file, id_index_patch, self.patch_shape)
+            if np.all(data==0):
+                patch_pred_list.append(np.zeros([self.n_label]+self.patch_shape))
+                continue
+            x = torch.as_tensor([data], device=self.device, dtype=torch.float)
+            patch_pred_list.append(self.model(x)[0].detach().cpu().numpy())
+        brain_wide_img_shape = [self.n_labels] + list(brain_width[1] - brain_width[0] + 1)
+        brain_wide_pred = stitch(patch_pred_list, 
+                                 list(zip(*id_index_patch_list))[1], 
+                                 brain_wide_img_shape)
         final_shape = [self.n_labels] + self.img_shape
         final_pred = np.zeros(final_shape)
-        
-        if not no_patch:
-            id_index_patch_list = create_id_index_patch_list([id_index], h5file, 
-                                                             self.patch_shape, trivial=False)
-            patch_pred_list = []
-            for id_index_patch in id_index_patch_list:
-                data, _ = get_data_from_file(h5file, id_index_patch, self.patch_shape)
-                if np.all(data==0):
-                    patch_pred_list.append(np.zeros([self.n_label]+self.patch_shape))
-                    continue
-                x = torch.as_tensor([data], device=self.device, dtype=torch.float)
-                patch_pred_list.append(self.model(x)[0].detach().cpu().numpy())
-            brain_wide_img_shape = [self.n_labels] + list(brain_width[1] - brain_width[0] + 1)
-            brain_wide_pred = stitch(patch_pred_list, 
-                                     list(zip(*id_index_patch_list))[1], 
-                                     brain_wide_img_shape)
-        else:
-            data, _ = get_data_from_file(h5file, id_index, None)
-            if np.all(data==0):
-                return final_pred
-            x = torch.as_tensor([data], device=self.device, dtype=torch.float)
-            brain_wide_pred = self.model(x)[0].detach().cpu().numpy()
-        
         final_pred[:,brain_width[0,0]:brain_width[1,0]+1,
                      brain_width[0,1]:brain_width[1,1]+1,
                      brain_width[0,2]:brain_width[1,2]+1] = brain_wide_pred
