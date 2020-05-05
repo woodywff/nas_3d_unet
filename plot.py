@@ -6,6 +6,9 @@ from graphviz import Digraph
 import matplotlib.image as mi
 import glob
 import pdb
+
+NS = '0.1'
+FS = '20'
     
 def plot_cell(filename, n_nodes=3, dc=True, fmt='png', dpi='200'):
     '''
@@ -18,7 +21,7 @@ def plot_cell(filename, n_nodes=3, dc=True, fmt='png', dpi='200'):
                 graph_attr = dict(dpi=dpi),
                 edge_attr = dict(fontsize='20',penwidth='1.5'),
                 node_attr = dict(style='filled', shape='rect', align='center',
-                                 fontsize='20', height='0.1', width='0.1',
+                                 fontsize=FS, height=NS, width=NS,
                                  penwidth='2'))
                 #engine='dot')
     g.attr(rankdir='TB' if dc else 'BT')
@@ -33,7 +36,7 @@ def plot_cell(filename, n_nodes=3, dc=True, fmt='png', dpi='200'):
     for n_ops in range(2,2+n_nodes):
         node_i = n_ops-2
         with g.subgraph(name='cluster_{}'.format(node_i)) as sg:
-            sg.attr(style='dashed', color='red', label='node {}'.format(node_i), 
+            sg.attr(style='dashed', color='red', label='Node_{}'.format(node_i), 
                     fontsize='20', penwidth='1.8', fontcolor='red')
             name_add = 'add'+str(node_i)
             sg.node(name=name_add, label='+', fillcolor='lightskyblue2')
@@ -71,7 +74,7 @@ def plot_searched_cell(op_list, filename, dc=True, fmt='png', dpi='200'):
                 graph_attr = dict(dpi=dpi),
                 edge_attr = dict(fontsize='20',penwidth='1.5'),
                 node_attr = dict(style='filled', shape='rect', align='center',
-                                 fontsize='20', height='0.1', width='0.1',
+                                 fontsize=FS, height=NS, width=NS,
                                  penwidth='2'))
                 #engine='dot')
     g.attr(rankdir='TB' if dc else 'BT')
@@ -88,7 +91,7 @@ def plot_searched_cell(op_list, filename, dc=True, fmt='png', dpi='200'):
     i = 0
     for node_i in range(n_nodes):
         with g.subgraph(name='cluster_{}'.format(node_i)) as sg:
-            sg.attr(style='dashed', color='red', label='node {}'.format(node_i), 
+            sg.attr(style='dashed', color='red', label='Node_{}'.format(node_i), 
                     fontsize='20', penwidth='1.8', fontcolor='red')
             name_add = 'add'+str(node_i)
             sg.node(name=name_add, label='+', fillcolor='lightskyblue2')
@@ -96,6 +99,11 @@ def plot_searched_cell(op_list, filename, dc=True, fmt='png', dpi='200'):
                 ssg.attr(rank='same')
                 for _ in range(2):
                     op, x_i = op_list[i]
+                    temp = op.split('_')
+                    if temp[0] == 'down':
+                        op = '_'.join(['d']+temp[1:])
+                    elif temp[0] == 'up':
+                        op = '_'.join(['u']+temp[1:])
                     ssg.node(str(i), label=op, fillcolor='ghostwhite')
                     g.edge(xs[x_i], str(i))
                     g.edge(str(i),name_add)
