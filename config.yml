@@ -6,7 +6,7 @@ data:
   - flair
   - t2
   aug_distort: 0.25
-  augment: true
+  augment: false
   augment_distortion_factor: 0.25
   augment_flip: true
   batch_size_train: 1
