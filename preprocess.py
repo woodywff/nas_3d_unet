@@ -2,7 +2,7 @@ import h5py
 import nibabel as nib
 import os
 import glob
-from dev_tools.my_tools import print_red, minmax_normalize
+from helper import minmax_normalize
 import pdb
 import numpy as np
 import yaml

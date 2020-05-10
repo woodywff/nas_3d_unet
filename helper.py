@@ -2,6 +2,14 @@ import numpy as np
 from torch.nn.functional import interpolate
 import pdb
 
+def minmax_normalize(img_npy):
+    '''
+    img_npy: ndarray
+    '''
+    min_value = np.min(img_npy)
+    max_value = np.max(img_npy)
+    return (img_npy - min_value)/(max_value - min_value)
+
 def calc_param_size(model):
     '''
     Show the memory cost of model.parameters, in MB. 
