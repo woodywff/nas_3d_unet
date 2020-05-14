@@ -6,6 +6,8 @@ from graphviz import Digraph
 import matplotlib.image as mi
 import glob
 import pdb
+import pickle
+from genotype import Genotype
 
 NS = '0.1'
 FS = '20'
@@ -143,7 +145,9 @@ def plot_ops(filename, fmt='png', dpi='200'):
     g.render(filename)
     return    
     
-
+# The three functions below are used in article: 
+# '3D U-Net Based Brain Tumor Segmentation and Survival Days Prediction' 
+# (https://arxiv.org/abs/1909.12901)
 def evaluation_plot(csv_file, criteria, label, save_name, val=True):
     df = pd.read_csv(csv_file)
     dict_criteria = {}
@@ -185,20 +189,19 @@ def four_in_all(png_fold, fig_format='pdf'):
     return
 
 if __name__ == '__main__':
+    # Plot metrics as in https://arxiv.org/abs/1909.12901
     draw_evaluate('data/results/Stats_Training_final.csv','log/training_figs', val=False)
     draw_evaluate('data/results/Stats_Validation_final.csv','log/val_figs')
     four_in_all('log/training_figs')
     four_in_all('log/val_figs')
-    
-    import pickle
-    from genotype import Genotype
 
+    # Plot the DC, UC and the searched DC, UC
     plot_cell('log/dc')
     plot_cell('log/uc', dc=False)
 
-    with open('BACKUP/new_best_genotype.pkl','rb') as f:
+    with open('log/best_genotype.pkl','rb') as f:
         g = eval(pickle.load(f)[0])
     plot_searched_cell(g.down, 'log/searched_dc')
     plot_searched_cell(g.up, 'log/searched_uc', dc=False)
-
-    plot_ops('log/ops')
+    
+#     plot_ops('log/ops')
