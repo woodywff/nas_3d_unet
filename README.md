@@ -1,17 +1,19 @@
-# nas_unet_brats
+# NAS-3D-U-Net
 
-to write data.h5 with h5py again.
+## Introduction
+Main.ipynb is the main storyline which is self-explained.
 
-to implement io with pytorch.utils.data.Datasets
-                     pytorch.utils.data.IterableDatasets
-                     self defined generator(h5py, pytables)
-anyway, it will give out an iterable object as output.     
+Most of the configurations are set up in config.yml
 
+## Development Environment
+CUDA10 torch==1.2.0 torchvision==0.4.0
+GTX1060 (6GB GPU Memory) is enough for code with patchsize=64.
+GTX1080Ti (11GB GPU Memory) is recommended.
 
-h5py
-self generator
+## Acknowledgement
+- This work refers a lot to [NasUnet](https://github.com/tianbaochou/NasUnet). Deeply appreciate their contributions to the community.
 
-For CUDA10 torch==1.2.0 torchvision==0.4.0
+- Many thanks to [BraTS 2019](https://www.med.upenn.edu/cbica/brats2019.html).
 
 
 
