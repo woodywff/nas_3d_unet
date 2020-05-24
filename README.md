@@ -12,8 +12,8 @@ GTX1060 (6GB GPU Memory) is enough for running the whole project (both searching
 
 GTX1080Ti (11GB GPU Memory) is recommended.
 
-## Acknowledgement
-- This work refers a lot to [NasUnet](https://github.com/tianbaochou/NasUnet). Deeply appreciate their contributions to the community.
+## Acknowledgment
+- This work refers a lot to [NasUnet](https://github.com/tianbaochou/NasUnet). We deeply appreciate their contributions to the community.
 
 - Many thanks to [BraTS 2019](https://www.med.upenn.edu/cbica/brats2019.html).
 
