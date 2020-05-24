@@ -7,7 +7,9 @@ Most of the configurations are set up in config.yml
 
 ## Development Environment
 CUDA10 torch==1.2.0 torchvision==0.4.0
-GTX1060 (6GB GPU Memory) is enough for code with patchsize=64.
+
+GTX1060 (6GB GPU Memory) is enough for running the whole project (both searching and training) with patchsize=64.
+
 GTX1080Ti (11GB GPU Memory) is recommended.
 
 ## Acknowledgement
