@@ -3,7 +3,7 @@
 ## Introduction
 This is the source code of this article: [Neural Architecture Search for Gliomas Segmentation on Multimodal Magnetic Resonance Imaging](https://arxiv.org/abs/2005.06338)
 
-`Main.ipynb` is the main storyline which is self-explained.
+`Main.ipynb` is the main storyline which is self-explained. (If you don't wanna run it in Jupyter Notebook, don't forget to change the `tqdm.notebook` to `tqdm`.)
 
 Most of the configurations are set up in `config.yml`.
 
