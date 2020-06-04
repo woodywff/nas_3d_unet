@@ -17,7 +17,7 @@ GTX1060 (6GB GPU Memory) is good enough for running the whole project (both sear
 GTX1080Ti (11GB GPU Memory) is recommended.
 
 ## Acknowledgment
-- Most of the NAS code in this work refers a lot to [NasUnet](https://github.com/tianbaochou/NasUnet). We deeply appreciate their contributions to the community.
+- This work refers a lot to [tianbaochou/NasUnet](https://github.com/tianbaochou/NasUnet) and [ellisdg/3DUnetCNN](https://github.com/ellisdg/3DUnetCNN). We deeply appreciate their contributions to the community.
 
 - Many thanks to [BraTS 2019](https://www.med.upenn.edu/cbica/brats2019.html).
 
