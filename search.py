@@ -187,7 +187,9 @@ class Searching(Base):
                 break
                 
         if best_gene is None:
-            best_gene = self.geno_count.most_common(1)[0]
+            gene = str(self.model.get_gene())
+            self.geno_count[gene] += 1
+            best_gene = (gene, self.geno_count[gene])
         with open(geno_file, 'wb') as f:
             pickle.dump(best_gene, f)
         return best_gene

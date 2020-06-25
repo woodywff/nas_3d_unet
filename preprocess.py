@@ -15,7 +15,7 @@ from random import shuffle
 
 def create_h5(source_folder, overwrite=False, config_yml='config.yml'):
     '''
-    From the downloaded unziped folder to normalized .h5 file.
+    From the downloaded unzipped folder to normalized .h5 file.
     Return .h5 path.
     '''
     with open(config_yml) as f:
