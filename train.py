@@ -68,12 +68,6 @@ class Training(Base):
             self.best_val_loss = 1.0
 
     def main_run(self):
-        '''
-        Return the best genotype in tuple:
-        (best_genotype: str(Genotype), geno_count: int)
-        '''
-#         pdb.set_trace()
-
         n_epochs = self.config['train']['epochs']
         
         for epoch in range(n_epochs):

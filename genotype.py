@@ -20,7 +20,7 @@ class GenoParser:
         '''
         alpha1: Weights for MixedOps with stride=1
         alpha2: Weights for MixedOps with stride=2
-        Note these two matrix are the same as in nas.KernelNet().
+        Note these two matrix are softmaxed as same as in nas.KernelNet().
         Each MixedOp would keep the Op with the highest alpha value.
         For each node, two edges with the highest alpha values (throughout all stride==1 and stride==2 edges) 
         are kept as the inputs.
