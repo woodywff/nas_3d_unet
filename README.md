@@ -7,6 +7,14 @@ This is the source code of this article: [Neural Architecture Search for Gliomas
 
 Most of the configurations are set up in `config.yml`.
 
+I've put the three downloaded and unzipped dataset files in a `nas_3d_unet/data/` folder as
+```
+nas_3d_unet/data/MICCAI_BraTS_2019_Data_Training/
+nas_3d_unet/data/MICCAI_BraTS_2019_Data_Validation/
+nas_3d_unet/data/MICCAI_BraTS_2019_Data_Testing/
+```
+You are free to keep these things anywhere else, just don't forget to change the corresponding arguments in the `config.yml`.
+
 This repository is also an update for the previous [brats2019 pipeline](https://github.com/woodywff/brats_2019-data_pipeline).
 
 ## Development Environment
